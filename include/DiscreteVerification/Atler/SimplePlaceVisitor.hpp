@@ -1,3 +1,4 @@
+
 /*
  * PlaceVisitor.hpp
  *
@@ -5,23 +6,22 @@
  *      Author: MathiasGS
  */
 
-#ifndef PLACEVISITOR_HPP_
-#define PLACEVISITOR_HPP_
+#ifndef SIMPLEPLACEVISITOR_HPP_
+#define SIMPLEPLACEVISITOR_HPP_
 
-#include "Core/Query/AST.hpp"
-#include "Core/Query/Visitor.hpp"
+#include "DiscreteVerification/Atler/SimpleVisitor.hpp"
 #include <exception>
 #include <vector>
 
-namespace VerifyTAPN {
+namespace VerifyTAPN::Atler {
 
 using namespace AST;
 
-class PlaceVisitor : public Visitor {
+class SimplePlaceVisitor : public SimpleVisitor {
 public:
-  PlaceVisitor() = default;
+  SimplePlaceVisitor() = default;
 
-  ~PlaceVisitor() override = default;
+  ~SimplePlaceVisitor() override = default;
 
 public: // visitor methods
   void visit(NotExpression &expr, Result &context) override;
@@ -59,5 +59,5 @@ public: // visitor methods
   };
 };
 
-} /* namespace VerifyTAPN */
+} // namespace VerifyTAPN::Atler
 #endif /* PLACEVISITOR_HPP_ */

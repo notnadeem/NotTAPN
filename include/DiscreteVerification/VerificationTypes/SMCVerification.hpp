@@ -1,10 +1,10 @@
 #ifndef SMCVERIFICATION_HPP
 #define SMCVERIFICATION_HPP
 
-#include "DiscreteVerification/VerificationTypes/Verification.hpp"
+#include "Core/Query/SMCQuery.hpp"
 #include "DiscreteVerification/DataStructures/NonStrictMarking.hpp"
 #include "DiscreteVerification/Generators/SMCRunGenerator.h"
-#include "Core/Query/SMCQuery.hpp"
+#include "DiscreteVerification/VerificationTypes/Verification.hpp"
 
 #include <mutex>
 
@@ -12,70 +12,76 @@ namespace VerifyTAPN::DiscreteVerification {
 
 class SMCVerification : public Verification<RealMarking> {
 
-    public:
+public:
+  SMCVerification(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking,
+                  AST::SMCQuery *query, VerificationOptions options)
+      : Verification(tapn, initialMarking, query, options),
+        runGenerator(tapn, options.getSMCNumericPrecision()), numberOfRuns(0),
+        maxTokensSeen(0), smcSettings(query->getSmcSettings()) {}
 
-        SMCVerification(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking, AST::SMCQuery *query,
-                        VerificationOptions options) 
-            : Verification(tapn, initialMarking, query, options)
-            , runGenerator(tapn, options.getSMCNumericPrecision())
-            , numberOfRuns(0), maxTokensSeen(0), smcSettings(query->getSmcSettings())
-            { }
+  virtual bool run() override;
+  virtual bool parallel_run();
 
-        virtual bool run() override;
-        virtual bool parallel_run();
+  virtual void prepare() {}
 
-        virtual void prepare() { }
+  virtual bool executeRun(SMCRunGenerator *generator = nullptr);
 
-        virtual bool executeRun(SMCRunGenerator* generator = nullptr);
+  virtual void printStats() override;
+  void printTransitionStatistics() const override;
 
-        virtual void printStats() override;
-        void printTransitionStatistics() const override;
+  unsigned int maxUsedTokens() override;
+  void setMaxTokensIfGreater(unsigned int i);
 
-        unsigned int maxUsedTokens() override;
-        void setMaxTokensIfGreater(unsigned int i);
+  virtual bool reachedRunBound(SMCRunGenerator *generator = nullptr);
 
-        virtual bool reachedRunBound(SMCRunGenerator* generator = nullptr);
-        
-        virtual void handleRunResult(const bool res, int steps, double delay) = 0;
-        virtual bool mustDoAnotherRun() = 0;
+  virtual void handleRunResult(const bool res, int steps, double delay) = 0;
+  virtual bool mustDoAnotherRun() = 0;
 
-        virtual void printResult() = 0;
+  virtual void printResult() = 0;
 
-        inline bool mustSaveTrace() const { return traces.size() < options.getSmcTraces(); }
-        void handleTrace(const bool runRes, SMCRunGenerator* generator = nullptr);
-        void saveTrace(SMCRunGenerator* generator = nullptr);
+  inline bool mustSaveTrace() const {
+    return traces.size() < options.getSmcTraces();
+  }
+  void handleTrace(const bool runRes, SMCRunGenerator *generator = nullptr);
+  void saveTrace(SMCRunGenerator *generator = nullptr);
 
-        void getTrace() override;
+  void getTrace() override;
 
-        void printHumanTrace(std::stack<RealMarking *> &stack, const std::string& name);
+  void printHumanTrace(std::stack<RealMarking *> &stack,
+                       const std::string &name);
 
-        void printXMLTrace(std::stack<RealMarking *> &stack, const std::string& name, rapidxml::xml_document<> &doc, rapidxml::xml_node<>* list_node);
+  void printXMLTrace(std::stack<RealMarking *> &stack, const std::string &name,
+                     rapidxml::xml_document<> &doc,
+                     rapidxml::xml_node<> *list_node);
 
-        rapidxml::xml_node<> *createTransitionNode(RealMarking *old, RealMarking *current, rapidxml::xml_document<> &doc);
+  rapidxml::xml_node<> *createTransitionNode(RealMarking *old,
+                                             RealMarking *current,
+                                             rapidxml::xml_document<> &doc);
 
-        void createTransitionSubNodes(RealMarking *old, RealMarking *current, rapidxml::xml_document<> &doc,
-                                      rapidxml::xml_node<> *transitionNode, const TAPN::TimedPlace &place,
-                                      const TAPN::TimeInterval &interval, int weight);
+  void createTransitionSubNodes(RealMarking *old, RealMarking *current,
+                                rapidxml::xml_document<> &doc,
+                                rapidxml::xml_node<> *transitionNode,
+                                const TAPN::TimedPlace &place,
+                                const TAPN::TimeInterval &interval, int weight);
 
-        rapidxml::xml_node<> *
-        createTokenNode(rapidxml::xml_document<> &doc, const TAPN::TimedPlace &place, const RealToken &token);
+  rapidxml::xml_node<> *createTokenNode(rapidxml::xml_document<> &doc,
+                                        const TAPN::TimedPlace &place,
+                                        const RealToken &token);
 
-    protected:
+protected:
+  SMCRunGenerator runGenerator;
+  SMCSettings smcSettings;
+  size_t numberOfRuns;
+  unsigned int maxTokensSeen;
+  double totalTime = 0;
+  unsigned long totalSteps = 0;
+  int64_t durationNs = 0;
 
-        SMCRunGenerator runGenerator;
-        SMCSettings smcSettings;
-        size_t numberOfRuns;
-        unsigned int maxTokensSeen;
-        double totalTime = 0;
-        unsigned long totalSteps = 0;
-        int64_t durationNs = 0;
+  std::mutex run_res_mutex;
 
-        std::mutex run_res_mutex;
-
-        std::vector<std::stack<RealMarking*>> traces;
-
+  std::vector<std::stack<RealMarking *>> traces;
 };
 
-}
+} // namespace VerifyTAPN::DiscreteVerification
 
-#endif  /* SMC_VERIFICATION_HPP */
+#endif /* SMC_VERIFICATION_HPP */

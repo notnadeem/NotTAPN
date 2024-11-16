@@ -1,175 +1,167 @@
 #ifndef VERIFYTAPN_TAPN_TIMEDTRANSITION_HPP_
 #define VERIFYTAPN_TAPN_TIMEDTRANSITION_HPP_
 
+#include "Core/Query/SMCQuery.hpp"
+#include "InhibitorArc.hpp"
+#include "OutputArc.hpp"
+#include "StochasticStructure.hpp"
+#include "TimedInputArc.hpp"
+#include "TransportArc.hpp"
 #include <string>
 #include <utility>
 #include <vector>
-#include "TimedInputArc.hpp"
-#include "TransportArc.hpp"
-#include "InhibitorArc.hpp"
-#include "OutputArc.hpp"
-#include "Core/Query/SMCQuery.hpp"
-#include "StochasticStructure.hpp"
 
 namespace VerifyTAPN {
 
-    using SMC::Distribution;
-    using SMC::FiringMode;
+using SMC::Distribution;
+using SMC::FiringMode;
 
-    class SymMarking;
+class SymMarking;
 
-    namespace TAPN {
-        class TimedArcPetriNet;
+namespace TAPN {
+class TimedArcPetriNet;
 
-        class TimedTransition {
-        public: // typedefs
-            typedef std::vector<TimedTransition *> Vector;
-        public:
-            TimedTransition(int index, std::string name, std::string id, bool urgent, bool controllable, double x, double y, Distribution distrib = Distribution::defaultDistribution(), double weight = 1, FiringMode firingMode = SMC::Oldest)
-                    : index(index), name(std::move(name)), id(std::move(id)), preset(), postset(), transportArcs(),
-                      untimedPostset(true),
-                      urgent(urgent), controllable(controllable), _position({x,y}), 
-                      _distribution(distrib), _weight(weight), _firingMode(firingMode) {};
+class TimedTransition {
+public: // typedefs
+  typedef std::vector<TimedTransition *> Vector;
 
-            TimedTransition() : name("*EMPTY*"), id("-1"), preset(), postset(), transportArcs(), index(-1),
-                                untimedPostset(true), urgent(false) {};
+public:
+  TimedTransition(int index, std::string name, std::string id, bool urgent,
+                  bool controllable, double x, double y,
+                  Distribution distrib = Distribution::defaultDistribution(),
+                  double weight = 1, FiringMode firingMode = SMC::Oldest)
+      : index(index), name(std::move(name)), id(std::move(id)), preset(),
+        postset(), transportArcs(), untimedPostset(true), urgent(urgent),
+        controllable(controllable), _position({x, y}), _distribution(distrib),
+        _weight(weight), _firingMode(firingMode) {};
 
-            virtual ~TimedTransition() { /* empty */ }
+  TimedTransition()
+      : name("*EMPTY*"), id("-1"), preset(), postset(), transportArcs(),
+        index(-1), untimedPostset(true), urgent(false) {};
 
-        public: // modifiers
-            void addToPreset(TimedInputArc* arc);
+  virtual ~TimedTransition() { /* empty */ }
 
-            void addToPostset(OutputArc* arc);
+public: // modifiers
+  void addToPreset(TimedInputArc *arc);
 
-            void addTransportArcGoingThrough(TransportArc* arc);
+  void addToPostset(OutputArc *arc);
 
-            void addIncomingInhibitorArc(InhibitorArc* arc);
+  void addTransportArcGoingThrough(TransportArc *arc);
 
-        public: // inspectors
-            inline const std::string &getName() const { return name; };
+  void addIncomingInhibitorArc(InhibitorArc *arc);
 
-            inline const std::string &getId() const { return id; };
+public: // inspectors
+  inline const std::string &getName() const { return name; };
 
-            void print(std::ostream &) const;
+  inline const std::string &getId() const { return id; };
 
-            const inline TimedInputArc::Vector &getPreset() const { return preset; }
+  void print(std::ostream &) const;
 
-            const inline TransportArc::Vector &getTransportArcs() const { return transportArcs; }
+  const inline TimedInputArc::Vector &getPreset() const { return preset; }
 
-            const inline InhibitorArc::Vector &getInhibitorArcs() const { return inhibitorArcs; }
+  const inline TransportArc::Vector &getTransportArcs() const {
+    return transportArcs;
+  }
 
-            inline unsigned int getPresetSize() const {
-                return getNumberOfInputArcs() + getNumberOfTransportArcs();
-            }
+  const inline InhibitorArc::Vector &getInhibitorArcs() const {
+    return inhibitorArcs;
+  }
 
-            const inline OutputArc::Vector &getPostset() const { return postset; }
+  inline unsigned int getPresetSize() const {
+    return getNumberOfInputArcs() + getNumberOfTransportArcs();
+  }
 
-            inline unsigned int getPostsetSize() const { return postset.size() + transportArcs.size(); }
+  const inline OutputArc::Vector &getPostset() const { return postset; }
 
-            inline unsigned int getNumberOfInputArcs() const { return preset.size(); };
+  inline unsigned int getPostsetSize() const {
+    return postset.size() + transportArcs.size();
+  }
 
-            inline unsigned int getNumberOfTransportArcs() const { return transportArcs.size(); }
+  inline unsigned int getNumberOfInputArcs() const { return preset.size(); };
 
-            inline unsigned int getNumberOfInhibitorArcs() const { return inhibitorArcs.size(); }
+  inline unsigned int getNumberOfTransportArcs() const {
+    return transportArcs.size();
+  }
 
-            inline bool isConservative() const { return preset.size() == postset.size(); }
+  inline unsigned int getNumberOfInhibitorArcs() const {
+    return inhibitorArcs.size();
+  }
 
-            inline unsigned int getIndex() const { return index; }
+  inline bool isConservative() const { return preset.size() == postset.size(); }
 
-            inline bool hasUntimedPostset() const { return untimedPostset; }
+  inline unsigned int getIndex() const { return index; }
 
-            inline void setUntimedPostset(bool untimed) { untimedPostset = untimed; }
+  inline bool hasUntimedPostset() const { return untimedPostset; }
 
-            inline bool isUrgent() const {
-                return urgent;
-            }
+  inline void setUntimedPostset(bool untimed) { untimedPostset = untimed; }
 
-            inline bool isControllable() const {
-                return controllable;
-            }
+  inline bool isUrgent() const { return urgent; }
 
-            inline bool isEnvironment() const {
-                return !isControllable();
-            }
+  inline bool isControllable() const { return controllable; }
 
-            inline void setControllable(bool value) {
-                controllable = value;
-            }
+  inline bool isEnvironment() const { return !isControllable(); }
 
-            uint32_t getProduced(const TimedPlace* place) const
-            {
-                // this could be precomputed
-                for(auto& pre : getPostset())
-                    if(&pre->getOutputPlace() == place)
-                        return pre->getWeight();
-                for(auto& pre : getTransportArcs())
-                    if(&pre->getDestination() == place)
-                        return pre->getWeight();
-                return 0;
-            }
+  inline void setControllable(bool value) { controllable = value; }
 
-            uint32_t getConsumed(const TimedPlace* place) const
-            {
-                // this could be precomputed
-                for(auto& pre : getPreset())
-                    if(&pre->getInputPlace() == place)
-                        return pre->getWeight();
-                for(auto& pre : getTransportArcs())
-                    if(&pre->getSource() == place)
-                        return pre->getWeight();
-                return 0;
-            }
+  uint32_t getProduced(const TimedPlace *place) const {
+    // this could be precomputed
+    for (auto &pre : getPostset())
+      if (&pre->getOutputPlace() == place)
+        return pre->getWeight();
+    for (auto &pre : getTransportArcs())
+      if (&pre->getDestination() == place)
+        return pre->getWeight();
+    return 0;
+  }
 
-            const auto& getPosition() const {
-                return _position;
-            }
+  uint32_t getConsumed(const TimedPlace *place) const {
+    // this could be precomputed
+    for (auto &pre : getPreset())
+      if (&pre->getInputPlace() == place)
+        return pre->getWeight();
+    for (auto &pre : getTransportArcs())
+      if (&pre->getSource() == place)
+        return pre->getWeight();
+    return 0;
+  }
 
-            const Distribution& getDistribution() const {
-                return _distribution;
-            }
+  const auto &getPosition() const { return _position; }
 
-            inline void setDistribution(Distribution distrib) {
-                _distribution = distrib;
-            }
+  const Distribution &getDistribution() const { return _distribution; }
 
-            const double& getWeight() const {
-                return _weight;
-            }
+  inline void setDistribution(Distribution distrib) { _distribution = distrib; }
 
-            inline void setWeight(double weight) {
-                _weight = weight;
-            }
+  const double &getWeight() const { return _weight; }
 
-            const FiringMode& getFiringMode() const {
-                return _firingMode;
-            }
+  inline void setWeight(double weight) { _weight = weight; }
 
-            inline void setFiringMode(FiringMode firingMode) {
-                _firingMode = firingMode;
-            }
+  const FiringMode &getFiringMode() const { return _firingMode; }
 
-        private: // data
-            const int index = 0;
-            std::string name;
-            std::string id;
-            TimedInputArc::Vector preset;
-            OutputArc::Vector postset;
-            TransportArc::Vector transportArcs;
-            InhibitorArc::Vector inhibitorArcs;
-            bool untimedPostset = false;
-            bool urgent = false;
-            bool controllable{};
-            std::pair<double,double> _position;
-            Distribution _distribution;
-            double _weight;
-            FiringMode _firingMode = SMC::Oldest;
-        };
+  inline void setFiringMode(FiringMode firingMode) { _firingMode = firingMode; }
 
-        inline std::ostream &operator<<(std::ostream &out, const TimedTransition &transition) {
-            transition.print(out);
-            return out;
-        }
-    }
+private: // data
+  const int index = 0;
+  std::string name;
+  std::string id;
+  TimedInputArc::Vector preset;
+  OutputArc::Vector postset;
+  TransportArc::Vector transportArcs;
+  InhibitorArc::Vector inhibitorArcs;
+  bool untimedPostset = false;
+  bool urgent = false;
+  bool controllable{};
+  std::pair<double, double> _position;
+  Distribution _distribution;
+  double _weight;
+  FiringMode _firingMode = SMC::Oldest;
+};
+
+inline std::ostream &operator<<(std::ostream &out,
+                                const TimedTransition &transition) {
+  transition.print(out);
+  return out;
 }
+} // namespace TAPN
+} // namespace VerifyTAPN
 
 #endif /* VERIFYTAPN_TAPN_TIMEDTRANSITION_HPP_ */
