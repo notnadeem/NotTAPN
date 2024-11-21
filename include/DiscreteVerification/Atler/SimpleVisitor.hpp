@@ -29,7 +29,7 @@ class PlusExpression;
 
 class ArithmeticExpression;
 
-class Query;
+class SimpleQuery;
 
 class Result {};
 
@@ -56,7 +56,7 @@ public:
 
   virtual void visit(BoolExpression &expr, Result &context) = 0;
 
-  virtual void visit(Query &query, Result &context) = 0;
+  virtual void visit(SimpleQuery &query, Result &context) = 0;
 
   virtual void visit(DeadlockExpression &expr, Result &context) = 0;
 

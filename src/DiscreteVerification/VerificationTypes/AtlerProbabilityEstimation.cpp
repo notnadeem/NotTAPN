@@ -1,6 +1,10 @@
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
+#include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
+#include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
 #include "DiscreteVerification/QueryVisitor.hpp"
 #include <iomanip>
 
@@ -33,8 +37,15 @@ bool AtlerProbabilityEstimation::run() {
   Atler::SimpleRealMarking siMarking = result->second;
 
   // Convert the SMCQuery to a simple representation
+  // cast query to SMCQuery
+  SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
+  Atler::AST::SimpleSMCQuery* simpleSMCQuery = Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
+
   // Convert the VerificationOptions to a simple representation
-  // Convert the PlaceVisitor to a simple representation
+  Atler::SimpleVerificationOptions simpleOptions = Atler::SimpleOptionsConverter::convert(options);
+
+  // TODO: Convert the PlaceVisitor to a simple representation
+  // NOTE: Also find a way to simplify the representation of the PlaceVisitor
 
   // Create an array with RunDataStruct for each of the required runs
   // That each contain the data required for each of the runs
@@ -43,6 +54,8 @@ bool AtlerProbabilityEstimation::run() {
   std::cout << "Number of places in simple tapn: " << stapn.placesLength
             << std::endl;
   std::cout << stapn.maxConstant << std::endl;
+  std::cout << "Magic number: " << simpleSMCQuery->quantifier << std::endl;
+  std::cout << "input length: " << simpleOptions.inputFile << std::endl;
   return false;
 }
 
@@ -62,6 +75,7 @@ void AtlerProbabilityEstimation::setMaxTokensIfGreater(unsigned int i) {
   }
 }
 
+// NOTE: This should not be necessary in the new implementation
 bool AtlerProbabilityEstimation::mustDoAnotherRun() {
   return numberOfRuns < runsNeeded;
 }

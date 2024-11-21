@@ -1,14 +1,7 @@
-
-/*
- * PlaceVisitor.hpp
- *
- *  Created on: 21/03/2012
- *      Author: MathiasGS
- */
-
 #ifndef SIMPLEPLACEVISITOR_HPP_
 #define SIMPLEPLACEVISITOR_HPP_
 
+#include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Atler/SimpleVisitor.hpp"
 #include <exception>
 #include <vector>
@@ -34,7 +27,7 @@ public: // visitor methods
 
   void visit(BoolExpression &expr, Result &context) override;
 
-  void visit(Query &query, Result &context) override;
+  void visit(SimpleQuery &query, Result &context) override;
 
   void visit(DeadlockExpression &expr, Result &context) override;
 

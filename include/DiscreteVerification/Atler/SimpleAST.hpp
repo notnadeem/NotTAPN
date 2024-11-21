@@ -3,33 +3,29 @@
 
 #include "SimpleVisitor.hpp"
 
-#include <iostream>
+/*#include <iostream>*/
 #include <string>
 
 namespace VerifyTAPN::Atler {
-namespace TAPN {
-class TimedArcPetriNet;
-}
 
 namespace AST {
 
 class Visitable {
 public:
   virtual void accept(SimpleVisitor &visitor, Result &context) = 0;
-
   int32_t eval = 0;
 };
 
-class Expression : public Visitable {
+class SimpleExpression : public Visitable {
 public:
-  virtual ~Expression() = default;
+  virtual ~SimpleExpression() = default;
 
-  virtual Expression *clone() const = 0;
+  virtual SimpleExpression *clone() const = 0;
 };
 
-class NotExpression : public Expression {
+class NotExpression : public SimpleExpression {
 public:
-  explicit NotExpression(Expression *expr) : expr(expr) {};
+  explicit NotExpression(SimpleExpression *expr) : expr(expr) {};
 
   NotExpression(const NotExpression &other) : expr(other.expr->clone()) {};
 
@@ -48,13 +44,13 @@ public:
 
   void accept(SimpleVisitor &visitor, Result &context) override;
 
-  Expression &getChild() const { return *expr; }
+  SimpleExpression &getChild() const { return *expr; }
 
 private:
-  Expression *expr;
+  SimpleExpression *expr;
 };
 
-class DeadlockExpression : public Expression {
+class DeadlockExpression : public SimpleExpression {
 public:
   explicit DeadlockExpression() = default;
 
@@ -65,7 +61,7 @@ public:
   void accept(SimpleVisitor &visitor, Result &context) override;
 };
 
-class BoolExpression : public Expression {
+class BoolExpression : public SimpleExpression {
 public:
   explicit BoolExpression(bool value) : value(value) {};
 
@@ -81,7 +77,7 @@ private:
   bool value;
 };
 
-class AtomicProposition : public Expression {
+class AtomicProposition : public SimpleExpression {
 public:
   enum op_e { LT, LE, EQ, NE };
 
@@ -119,9 +115,9 @@ private:
   op_e op;
 };
 
-class AndExpression : public Expression {
+class AndExpression : public SimpleExpression {
 public:
-  AndExpression(Expression *left, Expression *right)
+  AndExpression(SimpleExpression *left, SimpleExpression *right)
       : left(left), right(right) {};
 
   AndExpression(const AndExpression &other)
@@ -147,18 +143,18 @@ public:
 
   void accept(SimpleVisitor &visitor, Result &context) override;
 
-  Expression &getLeft() const { return *left; }
+  SimpleExpression &getLeft() const { return *left; }
 
-  Expression &getRight() const { return *right; }
+  SimpleExpression &getRight() const { return *right; }
 
 private:
-  Expression *left;
-  Expression *right;
+  SimpleExpression *left;
+  SimpleExpression *right;
 };
 
-class OrExpression : public Expression {
+class OrExpression : public SimpleExpression {
 public:
-  OrExpression(Expression *left, Expression *right)
+  OrExpression(SimpleExpression *left, SimpleExpression *right)
       : left(left), right(right) {};
 
   OrExpression(const OrExpression &other)
@@ -184,13 +180,13 @@ public:
 
   void accept(SimpleVisitor &visitor, Result &context) override;
 
-  Expression &getLeft() const { return *left; }
+  SimpleExpression &getLeft() const { return *left; }
 
-  Expression &getRight() const { return *right; }
+  SimpleExpression &getRight() const { return *right; }
 
 private:
-  Expression *left;
-  Expression *right;
+  SimpleExpression *left;
+  SimpleExpression *right;
 };
 
 class ArithmeticExpression : public Visitable {
@@ -376,17 +372,17 @@ private:
 // CG : Control Safety
 // PF : Probability Finally
 // PG : Probability Globally
-enum Quantifier { EF, AG, EG, AF, CF, CG, PF, PG };
+enum SimpleQuantifier { EF, AG, EG, AF, CF, CG, PF, PG };
 
-class Query : public Visitable {
+class SimpleQuery : public Visitable {
 public:
-  Query(Quantifier quantifier, Expression *expr)
+  SimpleQuery(SimpleQuantifier quantifier, SimpleExpression *expr)
       : quantifier(quantifier), expr(expr) {};
 
-  Query(const Query &other)
+  SimpleQuery(const SimpleQuery &other)
       : quantifier(other.quantifier), expr(other.expr->clone()) {};
 
-  Query &operator=(const Query &other) {
+  SimpleQuery &operator=(const SimpleQuery &other) {
     if (&other != this) {
       delete expr;
       expr = other.expr->clone();
@@ -394,27 +390,27 @@ public:
     return *this;
   }
 
-  virtual ~Query() { delete expr; }
+  virtual ~SimpleQuery() { delete expr; }
 
-  virtual Query *clone() const;
+  virtual SimpleQuery *clone() const;
 
   void accept(SimpleVisitor &visitor, Result &context) override;
 
-  Quantifier getQuantifier() const { return quantifier; }
+  SimpleQuantifier getQuantifier() const { return quantifier; }
 
-  const Expression &getConstChild() const { return *expr; }
+  const SimpleExpression &getConstChild() const { return *expr; }
 
-  Expression *getChild() { return expr; }
+  SimpleExpression *getChild() { return expr; }
 
-  void setChild(Expression *expr) { this->expr = expr; }
+  void setChild(SimpleExpression *expr) { this->expr = expr; }
 
-  void setQuantifier(Quantifier q) { quantifier = q; }
+  void setQuantifier(SimpleQuantifier q) { quantifier = q; }
 
   bool hasSMCQuantifier() const { return quantifier == PF || quantifier == PG; }
 
 private:
-  Quantifier quantifier;
-  Expression *expr;
+  SimpleQuantifier quantifier;
+  SimpleExpression *expr;
 };
 
 } // namespace AST
