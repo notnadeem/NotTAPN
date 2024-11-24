@@ -1,14 +1,11 @@
 #ifndef VERIFYYAPN_ATLER_SIMPLETIMEDPLACE_HPP_
 #define VERIFYYAPN_ATLER_SIMPLETIMEDPLACE_HPP_
 
-#include <string>
-#include <vector>
-
 #include "SimpleTimeInvariant.hpp"
-#include "SimpleTimedInputArc.hpp"
-#include "SimpleTimedTransportArc.hpp"
 #include "SimpleTimedInhibitorArc.hpp"
+#include "SimpleTimedInputArc.hpp"
 #include "SimpleTimedOutputArc.hpp"
+#include "SimpleTimedTransportArc.hpp"
 
 namespace VerifyTAPN {
 namespace Atler {
@@ -18,21 +15,26 @@ enum PlaceType { Inv, Dead, Std };
 struct SimpleTimedPlace {
   int index;
   PlaceType type;
-  std::string name;
-  std::string id;
+
+  const char *name;
+  size_t nameLength;
+
+  const char *id;
+  size_t idLength;
+
   SimpleTimeInvariant timeInvariant;
   bool untimed;
   int maxConstant;
   bool containsInhibitorArcs;
-  SimpleTimedInputArc* inputArcs;
+  SimpleTimedInputArc *inputArcs;
   size_t inputArcsLength;
-  SimpleTimedTransportArc* transportArcs;
+  SimpleTimedTransportArc *transportArcs;
   size_t transportArcsLength;
-  SimpleTimedTransportArc* prodTransportArcs;
+  SimpleTimedTransportArc *prodTransportArcs;
   size_t prodTransportArcsLength;
-  SimpleTimedInhibitorArc* inhibitorArcs;
+  SimpleTimedInhibitorArc *inhibitorArcs;
   size_t inhibitorArcsLength;
-  SimpleTimedOutputArc* outputArcs;
+  SimpleTimedOutputArc *outputArcs;
   size_t outputArcsLength;
   std::pair<double, double> _position;
 };

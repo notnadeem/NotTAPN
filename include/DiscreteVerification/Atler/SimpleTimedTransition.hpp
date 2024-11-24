@@ -31,6 +31,10 @@ struct SimpleTimedTransition {
   SimpleSMC::Distribution _distribution;
   double _weight;
   SimpleSMC::FiringMode _firingMode = SimpleSMC::Oldest;
+
+  inline int getPresetSize() const {
+      return presetLength + transportArcsLength;
+  }
 };
 } // namespace Atler
 } // namespace VerifyTAPN

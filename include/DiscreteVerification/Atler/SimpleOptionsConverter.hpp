@@ -69,6 +69,8 @@ private:
       return Atler::SimpleVerificationOptions::SearchType::MINDELAYFIRST;
     case VerifyTAPN::VerificationOptions::OverApprox:
       return Atler::SimpleVerificationOptions::SearchType::OverApprox;
+    default:
+      return Atler::SimpleVerificationOptions::SearchType::DEFAULT;
     }
   }
 
@@ -80,6 +82,8 @@ private:
       return Atler::SimpleVerificationOptions::VerificationType::DISCRETE;
     case VerifyTAPN::VerificationOptions::TIMEDART:
       return Atler::SimpleVerificationOptions::VerificationType::TIMEDART;
+    default:
+      return Atler::SimpleVerificationOptions::VerificationType::DISCRETE;
     }
   }
 
@@ -92,6 +96,9 @@ private:
           NO_MEMORY_OPTIMIZATION;
     case VerifyTAPN::VerificationOptions::PTRIE:
       return Atler::SimpleVerificationOptions::MemoryOptimization::PTRIE;
+    default:
+      return Atler::SimpleVerificationOptions::MemoryOptimization::
+          NO_MEMORY_OPTIMIZATION;
     }
   }
 
@@ -104,6 +111,8 @@ private:
       return Atler::SimpleVerificationOptions::Trace::SOME_TRACE;
     case VerifyTAPN::VerificationOptions::FASTEST_TRACE:
       return Atler::SimpleVerificationOptions::Trace::FASTEST_TRACE;
+    default:
+      return Atler::SimpleVerificationOptions::Trace::NO_TRACE;
     }
   }
 
@@ -117,6 +126,8 @@ private:
     case VerifyTAPN::VerificationOptions::WORKFLOW_STRONG_SOUNDNESS:
       return Atler::SimpleVerificationOptions::WorkflowMode::
           WORKFLOW_STRONG_SOUNDNESS;
+    default:
+      return Atler::SimpleVerificationOptions::WorkflowMode::NOT_WORKFLOW;
     }
   }
 
@@ -128,10 +139,12 @@ private:
     case VerifyTAPN::VerificationOptions::SATISFYING_TRACES:
       return Atler::SimpleVerificationOptions::SMCTracesType::SATISFYING_TRACES;
     case VerifyTAPN::VerificationOptions::UNSATISFYING_TRACES:
-      return Atler::SimpleVerificationOptions::SMCTracesType::UNSATISFYING_TRACES;
+      return Atler::SimpleVerificationOptions::SMCTracesType::
+          UNSATISFYING_TRACES;
+    default:
+      return Atler::SimpleVerificationOptions::SMCTracesType::ANY_TRACE;
     }
   }
-
 };
 
 } // namespace VerifyTAPN::Atler

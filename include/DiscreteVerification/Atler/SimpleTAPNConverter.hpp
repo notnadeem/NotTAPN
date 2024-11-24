@@ -226,11 +226,9 @@ public:
 
         // Create and initialize SimpleRealToken array with converted tokens
         auto tokenLength = realPlace.tokens.size();
-        srm.places[i].tokens = new SimpleRealToken[tokenLength];
-        srm.places[i].tokensLength = tokenLength;
+        srm.places[i].tokens = Atler::SimpleDynamicArray<SimpleRealToken>(tokenLength);
         for (size_t j = 0; j < tokenLength; j++) {
-            srm.places[i].tokens[j].age = realPlace.tokens[j].getAge();
-            srm.places[i].tokens[j].count = realPlace.tokens[j].getCount();
+            srm.places[i].tokens.add(SimpleRealToken{realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
         }
 
         // Set SimpleRealPlace fields
@@ -245,8 +243,8 @@ private:
   static SimpleTimedPlace convertPlace(const TAPN::TimedPlace &place) {
     SimpleTimedPlace simplePlace;
     simplePlace.index = place.getIndex();
-    simplePlace.name = place.getName();
-    simplePlace.id = place.getId();
+    simplePlace.name = place.getName().c_str();
+    simplePlace.id = place.getId().c_str();
     simplePlace.type = convertPlaceType(place.getType());
     simplePlace.timeInvariant = convertTimeInvariant(place.getInvariant());
     simplePlace.untimed = place.isUntimed();
