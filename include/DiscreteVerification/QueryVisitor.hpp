@@ -180,7 +180,6 @@ namespace VerifyTAPN { namespace DiscreteVerification {
         expr.eval = static_cast<IntResult &>(context).value;
     }
 
-
     template<typename T>
     void QueryVisitor<T>::visit(Query &query, AST::Result &context) {
         query.getChild()->accept(*this, context);

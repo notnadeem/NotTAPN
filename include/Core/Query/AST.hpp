@@ -87,7 +87,6 @@ namespace VerifyTAPN {
 
             ~BoolExpression() override = default;
 
-
             BoolExpression *clone() const override;
 
             void accept(Visitor &visitor, Result &context) override;
@@ -212,7 +211,6 @@ namespace VerifyTAPN {
                 delete right;
             };
 
-
             OrExpression *clone() const override;
 
             void accept(Visitor &visitor, Result &context) override;
@@ -259,7 +257,6 @@ namespace VerifyTAPN {
             }
 
             ~OperationExpression() override = default;
-
 
         public:
 

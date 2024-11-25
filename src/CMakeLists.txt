@@ -8,6 +8,8 @@ target_link_libraries(verifydtapn Core DiscreteVerification
     ${EXTERNAL_INSTALL_LOCATION}/lib/unfoldtacpn/libunfoldtacpn.a
     )
 
+find_package(CUDAToolkit REQUIRED)
+
 add_executable(verifydtapn-${ARCH_TYPE} main.cpp)
 
 target_link_libraries(verifydtapn-${ARCH_TYPE} verifydtapn DiscreteVerification)

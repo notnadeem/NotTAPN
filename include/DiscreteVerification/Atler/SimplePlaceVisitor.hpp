@@ -3,8 +3,6 @@
 
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Atler/SimpleVisitor.hpp"
-#include <exception>
-#include <vector>
 
 namespace VerifyTAPN::Atler {
 
@@ -39,17 +37,11 @@ public: // visitor methods
 
   virtual void visit(OperationExpression &expr, Result &context);
 
-  void visit(MultiplyExpression &expr, Result &context) override {
-    visit((OperationExpression &)expr, context);
-  };
+  void visit(MultiplyExpression &expr, Result &context) override { visit((OperationExpression &)expr, context); };
 
-  void visit(SubtractExpression &expr, Result &context) override {
-    visit((OperationExpression &)expr, context);
-  };
+  void visit(SubtractExpression &expr, Result &context) override { visit((OperationExpression &)expr, context); };
 
-  void visit(PlusExpression &expr, Result &context) override {
-    visit((OperationExpression &)expr, context);
-  };
+  void visit(PlusExpression &expr, Result &context) override { visit((OperationExpression &)expr, context); };
 };
 
 } // namespace VerifyTAPN::Atler
