@@ -13,11 +13,11 @@ template <typename T> struct SimpleDynamicArray {
 
   SimpleDynamicArray() : size(0), capacity(1) { arr = new T[capacity]; }
 
-  SimpleDynamicArray(size_t capacity) : size(0), capacity(capacity) {
-    arr = new T[capacity];
+  SimpleDynamicArray(size_t capacity) : size(0) {
+      if(capacity == 0) capacity = 1;
+      else capacity = capacity;
+      arr = new T[capacity];
   }
-
-  ~SimpleDynamicArray() { delete[] arr; }
 
   void resize() {
     capacity *= 2;
@@ -44,6 +44,11 @@ template <typename T> struct SimpleDynamicArray {
       arr[i] = arr[i + 1];
     }
     size--;
+  }
+
+  void clear() {
+    // NOTE: if the array contains pointers, we need to delete them and set all the values to nullptr
+    size = 0;
   }
 
   void set(size_t index, T value) {

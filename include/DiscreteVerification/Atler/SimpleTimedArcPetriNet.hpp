@@ -13,15 +13,15 @@ namespace Atler {
 struct SimpleTimedArcPetriNet {
   SimpleTimedPlace *places;
   size_t placesLength;
-  SimpleTimedTransition *transitions;
+  SimpleTimedTransition **transitions;
   size_t transitionsLength;
-  SimpleTimedInputArc *inputArcs;
+  SimpleTimedInputArc **inputArcs;
   size_t inputArcsLength;
-  SimpleTimedOutputArc *outputArcs;
+  SimpleTimedOutputArc **outputArcs;
   size_t outputArcsLength;
-  SimpleTimedTransportArc *transportArcs;
+  SimpleTimedTransportArc **transportArcs;
   size_t transportArcsLength;
-  SimpleTimedInhibitorArc *inhibitorArcs;
+  SimpleTimedInhibitorArc **inhibitorArcs;
   size_t inhibitorArcsLength;
   int maxConstant;
   int gcd;

@@ -1,6 +1,17 @@
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
+#include "DiscreteVerification/Atler/AtlerRunResult.hpp"
+#include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
+#include "DiscreteVerification/Atler/SimpleInterval.hpp"
+#include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
+#include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
+#include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
+#include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
 #include "DiscreteVerification/QueryVisitor.hpp"
 #include <iomanip>
+#include <vector>
 
 std::string printDoubleo(double value, unsigned int precision) {
   std::ostringstream oss;
@@ -22,7 +33,65 @@ AtlerProbabilityEstimation::AtlerProbabilityEstimation(
                                 smcSettings.confidence);
 }
 
-bool AtlerProbabilityEstimation::run() {}
+bool AtlerProbabilityEstimation::run() {
+  std::cout << "Converting TAPN and marking..." << std::endl;
+  auto result = Atler::SimpleTAPNConverter::convert(tapn, initialMarking);
+  Atler::SimpleTimedArcPetriNet stapn = result->first;
+  Atler::SimpleRealMarking siMarking = result->second;
+
+  std::cout << "Converting Query..." << std::endl;
+  SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
+  Atler::AST::SimpleSMCQuery *simpleSMCQuery =
+      Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
+
+  std::cout << "Converting Options..." << std::endl;
+  Atler::SimpleVerificationOptions simpleOptions =
+      Atler::SimpleOptionsConverter::convert(options);
+
+  // TODO: Convert the PlaceVisitor to a simple representation
+  // NOTE: Also find a way to simplify the representation of the PlaceVisitor
+
+  // Simulate prepare func
+  // setup the run generator
+
+  std::cout << "Creating run generator..." << std::endl;
+  auto runres = Atler::AtlerRunResult(stapn);
+  std::cout << "Run prepare " << std::endl;
+  runres.prepare(siMarking);
+
+  Atler::SimpleDynamicArray<Atler::AtlerRunResult*> clones(runsNeeded);
+  for (int i = 0; i < runsNeeded; i++) {
+      clones.add(new Atler::AtlerRunResult(runres));
+  }
+
+  for (int i = 0; i < clones.size; i++) {
+
+  }
+
+  // Create clones of the run generator
+
+
+  // print all the transition intervals
+  // for (size_t i = 0; i < runres.transitionIntervals.size; i++) {
+  //   std::cout << "Transition " << i << ": ";
+  //   for (size_t j = 0; j < runres.transitionIntervals.get(i).size; j++) {
+  //     std::cout << "(" << runres.transitionIntervals.get(i).get(j).lower()
+  //               << ", " << runres.transitionIntervals.get(i).get(j).upper()
+  //               << ") ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+
+  // End prepare
+  // std::cout << "Weight: " << stapn.places[0].inputArcs[0].weight <<
+  // std::endl; std::cout << "Number of places in simple tapn: " <<
+  // stapn.placesLength
+  //           << std::endl;
+  // std::cout << stapn.maxConstant << std::endl;
+  // std::cout << "Magic number: " << simpleSMCQuery->quantifier << std::endl;
+  // std::cout << "input length: " << simpleOptions.inputFile << std::endl;
+  return false;
+}
 
 bool AtlerProbabilityEstimation::parallel_run() { return false; }
 

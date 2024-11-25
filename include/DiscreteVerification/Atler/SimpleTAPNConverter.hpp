@@ -19,7 +19,9 @@ namespace Atler {
 
 class SimpleTAPNConverter {
 public:
-  static std::pair<SimpleTimedArcPetriNet, SimpleRealMarking> *convert(const TAPN::TimedArcPetriNet &tapn, DiscreteVerification::RealMarking &marking) {
+  static std::pair<SimpleTimedArcPetriNet, SimpleRealMarking> *
+  convert(const TAPN::TimedArcPetriNet &tapn,
+          DiscreteVerification::RealMarking &marking) {
     std::unordered_map<const TAPN::TimedPlace *, SimpleTimedPlace *> placeMap;
     std::unordered_map<const TAPN::TimedTransition *, SimpleTimedTransition *>
         transitionMap;
@@ -94,7 +96,7 @@ public:
         inputArcs[j] = inputArcMap.at(originalArc);
       }
 
-      simplePlace->inputArcs = *inputArcs;
+      simplePlace->inputArcs = inputArcs;
       simplePlace->inputArcsLength = originalPlace->getInputArcs().size();
 
       auto transportArcs = new SimpleTimedTransportArc
@@ -104,7 +106,7 @@ public:
         transportArcs[j] = transportArcMap.at(originalArc);
       }
 
-      simplePlace->transportArcs = *transportArcs;
+      simplePlace->transportArcs = transportArcs;
       simplePlace->transportArcsLength =
           originalPlace->getTransportArcs().size();
 
@@ -116,7 +118,7 @@ public:
         prodTransportArcs[j] = transportArcMap.at(originalArc);
       }
 
-      simplePlace->prodTransportArcs = *prodTransportArcs;
+      simplePlace->prodTransportArcs = prodTransportArcs;
       simplePlace->prodTransportArcsLength =
           originalPlace->getProdTransportArcs().size();
 
@@ -127,7 +129,7 @@ public:
         inhibitorArcs[j] = inhibitorArcMap.at(originalArc);
       }
 
-      simplePlace->inhibitorArcs = *inhibitorArcs;
+      simplePlace->inhibitorArcs = inhibitorArcs;
       simplePlace->inhibitorArcsLength =
           originalPlace->getInhibitorArcs().size();
 
@@ -138,7 +140,7 @@ public:
         outputArcs[j] = outputArcMap.at(originalArc);
       }
 
-      simplePlace->outputArcs = *outputArcs;
+      simplePlace->outputArcs = outputArcs;
       simplePlace->outputArcsLength = originalPlace->getOutputArcs().size();
     }
 
@@ -154,7 +156,7 @@ public:
         inputArcs[j] = inputArcMap.at(originalArc);
       }
 
-      simpleTransition->preset = inputArcs;
+      simpleTransition->preset = *inputArcs;
       simpleTransition->presetLength = originalTransition->getPreset().size();
 
       auto outputArcs =
@@ -164,7 +166,7 @@ public:
         outputArcs[j] = outputArcMap.at(originalArc);
       }
 
-      simpleTransition->postset = outputArcs;
+      simpleTransition->postset = *outputArcs;
       simpleTransition->postsetLength = originalTransition->getPostset().size();
 
       auto transportArcs = new SimpleTimedTransportArc
@@ -175,19 +177,20 @@ public:
         transportArcs[j] = transportArcMap.at(originalArc);
       }
 
-      simpleTransition->transportArcs = transportArcs;
+      simpleTransition->transportArcs = *transportArcs;
       simpleTransition->transportArcsLength =
           originalTransition->getTransportArcs().size();
 
       auto inhibitorArcs = new SimpleTimedInhibitorArc
           *[originalTransition->getInhibitorArcs().size()];
+      int inhibitorArcsLength = 0;
       for (size_t j = 0; j < originalTransition->getInhibitorArcs().size();
            j++) {
         auto originalArc = originalTransition->getInhibitorArcs()[j];
         inhibitorArcs[j] = inhibitorArcMap.at(originalArc);
       }
 
-      simpleTransition->inhibitorArcs = inhibitorArcs;
+      simpleTransition->inhibitorArcs = *inhibitorArcs;
       simpleTransition->inhibitorArcsLength =
           originalTransition->getInhibitorArcs().size();
     }
@@ -196,46 +199,51 @@ public:
     auto simpleTapn = new SimpleTimedArcPetriNet();
     simpleTapn->places = places;
     simpleTapn->placesLength = tapn.getPlaces().size();
-    simpleTapn->transitions = *transitions;
+    simpleTapn->transitions = transitions;
     simpleTapn->transitionsLength = tapn.getTransitions().size();
-    simpleTapn->inputArcs = *inputArcs;
+    simpleTapn->inputArcs = inputArcs;
     simpleTapn->inputArcsLength = tapn.getInputArcs().size();
-    simpleTapn->outputArcs = *outputArcs;
+    simpleTapn->outputArcs = outputArcs;
     simpleTapn->outputArcsLength = tapn.getOutputArcs().size();
-    simpleTapn->transportArcs = *transportArcs;
+    simpleTapn->transportArcs = transportArcs;
     simpleTapn->transportArcsLength = tapn.getTransportArcs().size();
-    simpleTapn->inhibitorArcs = *inhibitorArcs;
-    simpleTapn->inhibitorArcsLength = tapn.getInhibitorArcs().size();
+    simpleTapn->inhibitorArcs = inhibitorArcs;
+    simpleTapn->inhibitorArcsLength = tapn.getTransportArcs().size();
     simpleTapn->maxConstant = tapn.getMaxConstant();
     simpleTapn->gcd = tapn.getGCD();
 
     // Create and return new SimpleRealMarking
-    SimpleRealMarking srm;
+    std::cout << "Converting Marking..." << std::endl;
+    SimpleRealMarking srm(marking.getPlaceList().size());
     srm.deadlocked = marking.canDeadlock(tapn, false);
     srm.fromDelay = marking.getPreviousDelay();
-    srm.generatedBy = marking.getGeneratedBy() != nullptr ? transitionMap.at(marking.getGeneratedBy()) : nullptr;
+    srm.generatedBy = marking.getGeneratedBy() != nullptr
+                          ? transitionMap.at(marking.getGeneratedBy())
+                          : nullptr;
 
     // Initialize SimpleRealPlace array with mapped places
+    std::cout << "Converting Places..." << std::endl;
     auto placeLength = marking.getPlaceList().size();
     srm.places = new SimpleRealPlace[placeLength];
     for (size_t i = 0; i < placeLength; i++) {
-        DiscreteVerification::RealPlace& realPlace = marking.getPlaceList()[i];
+      DiscreteVerification::RealPlace &realPlace = marking.getPlaceList()[i];
 
-        // Get mapped place
-        auto simplePlace = placeMap.at(realPlace.place);
+      // Get mapped place
+      auto simplePlace = placeMap.at(realPlace.place);
 
-        // Create and initialize SimpleRealToken array with converted tokens
-        auto tokenLength = realPlace.tokens.size();
-        srm.places[i].tokens = Atler::SimpleDynamicArray<SimpleRealToken>(tokenLength);
-        for (size_t j = 0; j < tokenLength; j++) {
-            srm.places[i].tokens.add(SimpleRealToken{realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
-        }
+      // Create and initialize SimpleRealToken array with converted tokens
+      size_t tokenLength = realPlace.tokens.size();
+      for (size_t j = 0; j < tokenLength; j++) {
+        srm.places[i].tokens.add(SimpleRealToken{
+            realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
+      }
 
-        // Set SimpleRealPlace fields
-        srm.places[i].place = *simplePlace;
+      // Set SimpleRealPlace fields
+      srm.places[i].place = *simplePlace;
     }
 
-    auto result = new std::pair<SimpleTimedArcPetriNet, SimpleRealMarking>(*simpleTapn, srm);
+    auto result = new std::pair<SimpleTimedArcPetriNet, SimpleRealMarking>(
+        *simpleTapn, srm);
     return result;
   }
 
@@ -264,7 +272,7 @@ private:
     simpleTransition.urgent = transition.isUrgent();
     simpleTransition.controllable = transition.isControllable();
     simpleTransition._position = transition.getPosition();
-    simpleTransition._distribution =
+    simpleTransition.distribution =
         convertDistribution(transition.getDistribution());
     simpleTransition._weight = transition.getWeight();
     simpleTransition._firingMode =
@@ -353,7 +361,6 @@ private:
   static SimpleSMC::FiringMode convertFiringMode(const SMC::FiringMode &mode) {
     return static_cast<SimpleSMC::FiringMode>(mode);
   }
-
 };
 
 } // namespace Atler

@@ -4,6 +4,7 @@
 #include "SimpleTimedPlace.hpp"
 #include "SimpleTimedTransition.hpp"
 #include "SimpleDynamicArray.hpp"
+#include <iostream>
 #include <limits>
 
 namespace VerifyTAPN::Atler {
@@ -11,11 +12,30 @@ namespace VerifyTAPN::Atler {
 struct SimpleRealToken {
   double age;
   int count;
+
+  inline void deltaAge(double x) {
+      age += x;
+  }
 };
 
 struct SimpleRealPlace {
   SimpleTimedPlace place;
   SimpleDynamicArray<SimpleRealToken> tokens;
+
+  SimpleRealPlace() {
+     tokens = SimpleDynamicArray<SimpleRealToken>();
+  }
+
+  SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength): place(place) {
+     tokens = SimpleDynamicArray<SimpleRealToken>(tokensLength);
+  }
+
+  inline void deltaAge(double x) {
+      for(size_t i = 0; i < tokens.size; i++) {
+          auto newAge = tokens.get(i).age + x;
+          tokens.set(i, SimpleRealToken{newAge, tokens.get(i).count});
+      }
+  }
 
   inline double maxTokenAge() const {
       if(tokens.size == 0) {
@@ -46,7 +66,7 @@ struct SimpleRealPlace {
 
 struct SimpleRealMarking {
   SimpleRealPlace *places;
-  size_t placesLength;
+  size_t placesLength = 0;
 
   bool deadlocked;
   const SimpleTimedTransition *generatedBy = nullptr;
@@ -54,8 +74,14 @@ struct SimpleRealMarking {
   // static std::vector<SimpleRealToken> emptyTokenList;
 
   SimpleRealMarking() {
-      placesLength = 0;
-      places = nullptr;
+      places = new SimpleRealPlace[placesLength];
+      deadlocked = false;
+      generatedBy = nullptr;
+      fromDelay = 0.0;
+  }
+
+  SimpleRealMarking(size_t placesLength) : placesLength(placesLength) {
+      places = new SimpleRealPlace[placesLength];
       deadlocked = false;
       generatedBy = nullptr;
       fromDelay = 0.0;
@@ -64,25 +90,31 @@ struct SimpleRealMarking {
   // NOTE: (For CUDA) You don't have to care about the destructor
   // Or just use teh cudaFree() function
   // Also not sure if destructors work in CUDA
-  ~SimpleRealMarking() {
-      delete[] places;
+  // ~SimpleRealMarking() {
+  //     delete[] places;
+  // }
+
+  void deltaAge(double x) {
+      for (size_t i = 0; i < placesLength; i++) {
+          places[i].deltaAge(x);
+      }
   }
 
-  SimpleRealMarking clone() const {
-      SimpleRealMarking result;
-      result.placesLength = placesLength;
-      result.places = new SimpleRealPlace[placesLength];
-      for (size_t i = 0; i < placesLength; i++) {
-          result.places[i].place = places[i].place;
-          for (size_t j = 0; j < places[i].tokens.size; j++) {
-              result.places[i].tokens.add(places[i].tokens.get(j));
-          }
-      }
-      result.deadlocked = deadlocked;
-      result.generatedBy = generatedBy;
-      result.fromDelay = fromDelay;
-      return result;
-  }
+  SimpleRealMarking *clone() const {
+        SimpleRealMarking *result = new SimpleRealMarking();
+        result->placesLength = placesLength;
+        result->places = new SimpleRealPlace[placesLength];
+        for (size_t i = 0; i < placesLength; i++) {
+            result->places[i].place = places[i].place;
+            for (size_t j = 0; j < places[i].tokens.size; j++) {
+                result->places[i].tokens.add(places[i].tokens.get(j));
+            }
+        }
+        result->deadlocked = deadlocked;
+        result->generatedBy = generatedBy;
+        result->fromDelay = fromDelay;
+        return result;
+    }
 
   uint32_t numberOfTokensInPlace(int placeId) const {
       return places[placeId].totalTokenCount();

@@ -6,6 +6,7 @@
 #include "SimpleTimedInputArc.hpp"
 #include "SimpleTimedOutputArc.hpp"
 #include "SimpleTimedTransportArc.hpp"
+#include <cstddef>
 #include <string>
 
 namespace VerifyTAPN {
@@ -15,20 +16,20 @@ struct SimpleTimedTransition {
   std::string name;
   std::string id;
 
-  SimpleTimedInputArc** preset = nullptr;
-  int presetLength = 0;
-  SimpleTimedOutputArc** postset = nullptr;
-  int postsetLength = 0;
-  SimpleTimedTransportArc** transportArcs = nullptr;
-  int transportArcsLength = 0;
-  SimpleTimedInhibitorArc** inhibitorArcs = nullptr;
-  int inhibitorArcsLength = 0;
+  SimpleTimedInputArc* preset = nullptr;
+  size_t presetLength = 0;
+  SimpleTimedOutputArc* postset = nullptr;
+  size_t postsetLength = 0;
+  SimpleTimedTransportArc* transportArcs = nullptr;
+  size_t transportArcsLength = 0;
+  SimpleTimedInhibitorArc* inhibitorArcs = nullptr;
+  size_t inhibitorArcsLength = 0;
 
   bool untimedPostset = false;
   bool urgent = false;
   bool controllable{};
   std::pair<double, double> _position;
-  SimpleSMC::Distribution _distribution;
+  SimpleSMC::Distribution distribution;
   double _weight;
   SimpleSMC::FiringMode _firingMode = SimpleSMC::Oldest;
 

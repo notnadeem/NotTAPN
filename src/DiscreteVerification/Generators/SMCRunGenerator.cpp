@@ -1,7 +1,7 @@
-/* 
+/*
  * File:   SMCRunGenerator.cpp
  * Author: Tanguy Dubois
- * 
+ *
  * Created on 11 April 2024, 10.13
  */
 
@@ -59,7 +59,7 @@ namespace VerifyTAPN {
                     const Distribution& distrib = _tapn.getTransitions()[i]->getDistribution();
                     _dates_sampled[i] = distrib.sample(_rng, _numericPrecision);
                 }
-                deadlocked &=   _transitionIntervals[i].empty() || 
+                deadlocked &=   _transitionIntervals[i].empty() ||
                                 (
                                     _transitionIntervals[i].size() == 1 &&
                                     _transitionIntervals[i].front().upper() == 0 &&
@@ -105,7 +105,7 @@ namespace VerifyTAPN {
                         _dates_sampled[i] = date;
                     }
                 }
-                deadlocked &=   _transitionIntervals[i].empty() || 
+                deadlocked &=   _transitionIntervals[i].empty() ||
                                 (
                                     _transitionIntervals[i].size() == 1 &&
                                     _transitionIntervals[i].front().upper() == 0 &&
@@ -128,7 +128,7 @@ namespace VerifyTAPN {
 
         RealMarking* SMCRunGenerator::next() {
             auto [transi, delay] = getWinnerTransitionAndDelay();
-            
+
             if(delay == std::numeric_limits<double>::infinity()) {
                 _maximal = true;
                 return nullptr;
@@ -138,7 +138,7 @@ namespace VerifyTAPN {
             _totalTime += delay;
 
             _parent->setPreviousDelay(delay + _parent->getPreviousDelay());
-        
+
             if(transi != nullptr) {
                 _totalSteps++;
                 _transitionsStatistics[transi->getIndex()]++;
@@ -193,7 +193,7 @@ namespace VerifyTAPN {
                 }
             }
             TimedTransition *winner;
-            if(winner_indexs.empty()) { 
+            if(winner_indexs.empty()) {
                 winner = nullptr;
             } else if(winner_indexs.size() == 1) {
                 winner = _tapn.getTransitions()[winner_indexs[0]];
@@ -240,7 +240,7 @@ namespace VerifyTAPN {
             for(InhibitorArc* inhib : transi->getInhibitorArcs()) {
                 if(_parent->numberOfTokensInPlace(inhib->getInputPlace().getIndex()) >= inhib->getWeight()) {
                     return disabled;
-                } 
+                }
             }
             for(TimedInputArc* arc : transi->getPreset()) {
                 auto &place = _parent->getPlaceList()[arc->getInputPlace().getIndex()];
@@ -255,7 +255,7 @@ namespace VerifyTAPN {
                 TimeInterval arcInterval = arc->getInterval();
                 if(targetInvariant.getBound() < arcInterval.getUpperBound()) {
                     arcInterval.setUpperBound(targetInvariant.getBound(), targetInvariant.isBoundStrict());
-                } 
+                }
                 firingInterval = Util::setIntersection<double>(firingInterval, arcFiringDates(arcInterval, arc->getWeight(), place.tokens));
                 if(firingInterval.empty()) return firingInterval;
             }
@@ -291,7 +291,7 @@ namespace VerifyTAPN {
             }
             return firingDates;
         }
-        
+
         std::vector<RealToken> SMCRunGenerator::removeRandom(RealTokenList& tokenList, const TimeInterval& interval, const int weight) {
             std::vector<RealToken> res;
             int remaining = weight;

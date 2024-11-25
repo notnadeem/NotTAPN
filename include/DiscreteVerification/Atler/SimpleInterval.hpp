@@ -4,6 +4,7 @@
 #include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
 #include <algorithm>
 #include <limits>
+#include <iostream>
 
 // TODO: Change numeric_limits to the cuda/thrust ones
 
@@ -120,13 +121,16 @@ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterval &ele
     first.add(element);
 }
 
-SimpleDynamicArray<SimpleInterval> setIntersection(SimpleDynamicArray<SimpleInterval> first, SimpleDynamicArray<SimpleInterval> second) {
-    SimpleDynamicArray<SimpleInterval> result;
+SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArray<SimpleInterval>& first, const SimpleDynamicArray<SimpleInterval>& second) {
+    SimpleDynamicArray<SimpleInterval> result = SimpleDynamicArray<SimpleInterval>(first.size + second.size);
 
+    std::cout << "Interception" << std::endl;
     if (first.empty() || second.empty()) {
+        std::cout << "Interception inner: " << first.empty() << " " << second.empty() << std::endl;
         return result;
     }
 
+    std::cout << "Interception 2" << std::endl;
     unsigned int i = 0, j = 0;
 
     while (i < first.size && j < second.size) {
@@ -146,6 +150,8 @@ SimpleDynamicArray<SimpleInterval> setIntersection(SimpleDynamicArray<SimpleInte
         if (i2up <= i1up) {
             j++;
         }
+
+        std::cout << "Interception 3" << std::endl;
     }
     return result;
 }
