@@ -1,7 +1,7 @@
-#ifndef VERIFYTAPN_ATLER_SIMPLEINTERVAL_CUH_
-#define VERIFYTAPN_ATLER_SIMPLEINTERVAL_CUH_
+#ifndef VERIFYTAPN_ATLER_CUDAINTERVAL_CUH_
+#define VERIFYTAPN_ATLER_CUDAINTERVAL_CUH_
 
-#include "DiscreteVerification/Cuda/SimpleDynamicArray.cuh"
+#include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include <cuda_runtime.h>
 #include <math.h>
 
@@ -11,7 +11,7 @@ namespace VerifyTAPN {
 namespace Cuda {
 namespace Util {
 
-struct SimpleInterval {
+struct CudaInterval {
   double low, high;
 
   __host__ __device__ static double boundUp() { return HUGE_VAL; }
@@ -20,8 +20,8 @@ struct SimpleInterval {
 
   __host__ __device__ static double epsilon() { return __DBL_EPSILON__; }
 
-  __host__ __device__ SimpleInterval() : low(0), high(0) {}
-  __host__ __device__ SimpleInterval(double l, double h) : low(l), high(h) {
+  __host__ __device__ CudaInterval() : low(0), high(0) {}
+  __host__ __device__ CudaInterval(double l, double h) : low(l), high(h) {
     if (low > high) {
       low = boundUp();
       high = boundDown();
@@ -52,30 +52,30 @@ struct SimpleInterval {
     }
   }
 
-  __host__ __device__ SimpleInterval positive() {
-    if (empty() || high < 0) return SimpleInterval((double)1, 0);
-    return SimpleInterval(max(low, (double)0), high);
+  __host__ __device__ CudaInterval positive() {
+    if (empty() || high < 0) return CudaInterval((double)1, 0);
+    return CudaInterval(max(low, (double)0), high);
   }
 };
 
-__host__ __device__ SimpleInterval intersect(const SimpleInterval &l, const SimpleInterval r) {
+__host__ __device__ CudaInterval intersect(const CudaInterval &l, const CudaInterval r) {
   if (l.empty()) return l;
   if (r.empty()) return r;
-  SimpleInterval n(max(l.low, r.low), min(l.high, r.high));
+  CudaInterval n(max(l.low, r.low), min(l.high, r.high));
   return n;
 }
 
-__host__ __device__ SimpleInterval hull(const SimpleInterval &l, const SimpleInterval r) {
-  return SimpleInterval(min(l.low, r.low), max(l.high, r.high));
+__host__ __device__ CudaInterval hull(const CudaInterval &l, const CudaInterval r) {
+  return CudaInterval(min(l.low, r.low), max(l.high, r.high));
 }
 
-__host__ __device__ bool overlap(const SimpleInterval &l, const SimpleInterval r) {
+__host__ __device__ bool overlap(const CudaInterval &l, const CudaInterval r) {
   auto i = intersect(l, r);
   return !i.empty();
 }
 
 // Fix both setAdd and setIntersection later
-__host__ __device__ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterval &element) {
+__host__ __device__ void setAdd(CudaDynamicArray<CudaInterval> &first, const CudaInterval &element) {
   for (unsigned int i = 0; i < first.size; i++) {
 
     if (element.upper() < first.get(i).lower()) {
@@ -83,7 +83,7 @@ __host__ __device__ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const
       first.set(i, element);
       return;
     } else if (overlap(element, first.get(i))) {
-      SimpleInterval u = hull(element, first.get(i));
+      CudaInterval u = hull(element, first.get(i));
       // Merge with node
       first.set(i, u);
       // Clean up
@@ -91,7 +91,7 @@ __host__ __device__ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const
         if (first.get(i).lower() <= u.upper()) {
           // Merge items
           if (first.get(i).upper() > u.upper()) {
-            first.set(i - 1, SimpleInterval(first.get(i - 1).lower(), first.get(i).upper()));
+            first.set(i - 1, CudaInterval(first.get(i - 1).lower(), first.get(i).upper()));
           }
           first.remove(i);
           i--;
@@ -103,9 +103,9 @@ __host__ __device__ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const
   first.add(element);
 }
 
-__host__ __device__ SimpleDynamicArray<SimpleInterval> setIntersection(SimpleDynamicArray<SimpleInterval> first,
-                                                                       SimpleDynamicArray<SimpleInterval> second) {
-  SimpleDynamicArray<SimpleInterval> result;
+__host__ __device__ CudaDynamicArray<CudaInterval> setIntersection(CudaDynamicArray<CudaInterval> first,
+                                                                       CudaDynamicArray<CudaInterval> second) {
+  CudaDynamicArray<CudaInterval> result;
 
   if (first.empty() || second.empty()) {
     return result;
@@ -117,7 +117,7 @@ __host__ __device__ SimpleDynamicArray<SimpleInterval> setIntersection(SimpleDyn
     double i1up = first.get(i).upper();
     double i2up = second.get(j).upper();
 
-    SimpleInterval intersection = intersect(first.get(i), second.get(j));
+    CudaInterval intersection = intersect(first.get(i), second.get(j));
 
     if (!intersection.empty()) {
       result.add(intersection);
@@ -137,4 +137,4 @@ __host__ __device__ SimpleDynamicArray<SimpleInterval> setIntersection(SimpleDyn
 } /* namespace Util */
 } // namespace Cuda
 } /* namespace VerifyTAPN */
-#endif /* SIMPLEINTERVAL_CUH_ */
+#endif /* CUDAINTERVAL_CUH_ */

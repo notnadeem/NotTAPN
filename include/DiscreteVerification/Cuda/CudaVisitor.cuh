@@ -1,5 +1,5 @@
-#ifndef SIMPLEVISITOR_CUH_
-#define SIMPLEVISITOR_CUH_
+#ifndef CUDAVISITOR_CUH_
+#define CUDAVISITOR_CUH_
 
 #include <cuda_runtime.h>
 
@@ -44,9 +44,9 @@ typedef SpecificResult<int> IntResult;
 typedef SpecificResult<bool> BoolResult;
 /*typedef SpecificResult<std::vector<int>> IntVectorResult;*/
 
-class SimpleVisitor {
+class CudaVisitor {
 public:
-  __host__ __device__ virtual ~SimpleVisitor() = default;
+  __host__ __device__ virtual ~CudaVisitor() = default;
 
   __host__ __device__ virtual void visit(NotExpression &expr, Result &context) = 0;
 

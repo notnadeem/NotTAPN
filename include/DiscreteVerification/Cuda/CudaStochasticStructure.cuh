@@ -1,5 +1,5 @@
-#ifndef SIMPLE_STOCHASTIC_STRUCTURE_CUH_
-#define SIMPLE_STOCHASTIC_STRUCTURE_CUH_
+#ifndef CUDA_STOCHASTIC_STRUCTURE_CUH_
+#define CUDA_STOCHASTIC_STRUCTURE_CUH_
 
 // TODO: Check if this is correct
 
@@ -108,6 +108,6 @@ struct Distribution {
   std::string toXML() const;
 };
 
-} // namespace VerifyTAPN::Cuda::SimpleSMC
+} // namespace VerifyTAPN::Cuda::CudaSMC
 
 #endif

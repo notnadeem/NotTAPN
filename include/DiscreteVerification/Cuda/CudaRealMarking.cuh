@@ -1,23 +1,38 @@
-#ifndef VERIFYTAPN_ATLER_SIMPLEREALMARKING_CUH_
-#define VERIFYTAPN_ATLER_SIMPLEREALMARKING_CUH_
+#ifndef VERIFYTAPN_ATLER_CUDAREALMARKING_CUH_
+#define VERIFYTAPN_ATLER_CUDAREALMARKING_CUH_
 
-#include "DiscreteVerification/Cuda/SimpleDynamicArray.cuh"
 #include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
-#include "DiscreteVerification/Cuda/SimpleTimedTransition.cuh"
+#include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::Cuda {
 
-struct SimpleRealToken {
+struct CudaRealToken {
   double age;
   int count;
+
+  __host__ __device__ inline void deltaAge(double x) { age += x; }
 };
 
-struct SimpleRealPlace {
+struct CudaRealPlace {
   Atler::SimpleTimedPlace place;
-  SimpleDynamicArray<SimpleRealToken> tokens;
+  CudaDynamicArray<CudaRealToken> tokens;
+
+  __host__ __device__ CudaRealPlace() { tokens = CudaDynamicArray<CudaRealToken>(); }
+
+  __host__ __device__ CudaRealPlace(Atler::SimpleTimedPlace place, size_t tokensLength) : place(place) {
+    tokens = CudaDynamicArray<CudaRealToken>(tokensLength);
+  }
+
+  __host__ __device__ inline void deltaAge(double x) {
+    for (size_t i = 0; i < tokens.size; i++) {
+      auto newAge = tokens.get(i).age + x;
+      tokens.set(i, CudaRealToken{newAge, tokens.get(i).count});
+    }
+  }
 
   __host__ __device__ inline double maxTokenAge() const {
     if (tokens.size == 0) {
@@ -45,18 +60,24 @@ struct SimpleRealPlace {
   __host__ __device__ inline bool isEmpty() const { return tokens.size == 0; }
 };
 
-struct SimpleRealMarking {
-  SimpleRealPlace *places;
-  size_t placesLength;
+struct CudaRealMarking {
+  CudaRealPlace *places;
+  size_t placesLength = 0;
 
   bool deadlocked;
-  const SimpleTimedTransition *generatedBy = nullptr;
+  const CudaTimedTransition *generatedBy = nullptr;
   double fromDelay = 0.0;
   // static std::vector<SimpleRealToken> emptyTokenList;
 
-  __host__ __device__ SimpleRealMarking() {
-    placesLength = 0;
-    places = nullptr;
+  __host__ __device__ CudaRealMarking() {
+    places = new CudaRealPlace[placesLength];
+    deadlocked = false;
+    generatedBy = nullptr;
+    fromDelay = 0.0;
+  }
+
+  CudaRealMarking(size_t placesLength) : placesLength(placesLength) {
+    places = new CudaRealPlace[placesLength];
     deadlocked = false;
     generatedBy = nullptr;
     fromDelay = 0.0;
@@ -67,21 +88,28 @@ struct SimpleRealMarking {
   // Also not sure if destructors work in CUDA
 
   // UPDATE: new and delete should be supported but slower, fix this later
-  __host__ __device__ ~SimpleRealMarking() { delete[] places; }
+  // Try not to use this
+  __host__ __device__ ~CudaRealMarking() { delete[] places; }
 
-  __host__ __device__ SimpleRealMarking clone() const {
-    SimpleRealMarking result;
-    result.placesLength = placesLength;
-    result.places = new SimpleRealPlace[placesLength];
+  __host__ __device__ void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
-      result.places[i].place = places[i].place;
+      places[i].deltaAge(x);
+    }
+  }
+
+  __host__ __device__ CudaRealMarking *clone() const {
+    CudaRealMarking *result = new CudaRealMarking();
+    result->placesLength = placesLength;
+    result->places = new CudaRealPlace[placesLength];
+    for (size_t i = 0; i < placesLength; i++) {
+      result->places[i].place = places[i].place;
       for (size_t j = 0; j < places[i].tokens.size; j++) {
-        result.places[i].tokens.add(places[i].tokens.get(j));
+        result->places[i].tokens.add(places[i].tokens.get(j));
       }
     }
-    result.deadlocked = deadlocked;
-    result.generatedBy = generatedBy;
-    result.fromDelay = fromDelay;
+    result->deadlocked = deadlocked;
+    result->generatedBy = generatedBy;
+    result->fromDelay = fromDelay;
     return result;
   }
 
@@ -98,9 +126,8 @@ struct SimpleRealMarking {
     }
     return available;
   }
-
 };
 
-} // namespace VerifyTAPN::Alter
+} // namespace VerifyTAPN::Cuda
 
 #endif

@@ -1,20 +1,27 @@
-#ifndef VERIFYTAPN_ATLER_SIMPLEDYNAMICARRAY_CUH_
-#define VERIFYTAPN_ATLER_SIMPLEDYNAMICARRAY_CUH_
+#ifndef VERIFYTAPN_ATLER_CUDADYNAMICARRAY_CUH_
+#define VERIFYTAPN_ATLER_CUDADYNAMICARRAY_CUH_
 
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::Cuda {
 
-template <typename T> struct SimpleDynamicArray {
+template <typename T> struct CudaDynamicArray {
   T *arr;
   size_t size;
   size_t capacity;
 
-  __host__ SimpleDynamicArray() : size(0), capacity(1) { cudaMallocManaged(&arr, capacity * sizeof(T)); }
+  __host__ CudaDynamicArray() : size(0), capacity(1) { cudaMallocManaged(&arr, capacity * sizeof(T)); }
 
-  __host__ SimpleDynamicArray(size_t cap) : size(0), capacity(cap) { cudaMallocManaged(&arr, capacity * sizeof(T)); }
+  __host__ CudaDynamicArray(size_t cap) : size(0) {
+    if (cap == 0)
+      capacity = 1;
+    else
+      capacity = cap;
+    cudaMallocManaged(&arr, capacity * sizeof(T));
+  }
 
-  __host__ ~SimpleDynamicArray() { cudaFree(arr); }
+  //Try no to use this constructor due to possible double memry freeing
+  __host__ ~CudaDynamicArray() { cudaFree(arr); }
 
   __host__ __device__ void resize() {
     capacity *= 2;
@@ -52,6 +59,11 @@ template <typename T> struct SimpleDynamicArray {
       return T();
     }
     return arr[index];
+  }
+
+  __host__ __device__ void clear() {
+    // NOTE: if the array contains pointers, we need to delete them and set all the values to nullptr
+    size = 0;
   }
 
   __host__ __device__ bool empty() const { return size == 0; }

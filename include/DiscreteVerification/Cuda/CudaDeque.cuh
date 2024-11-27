@@ -1,9 +1,9 @@
-// Implementation of a simple double-ended queue
+// Implementation of a Cuda double-ended queue
 // Make it at some point in time
 // NOTE: for the AtlerRunResult clas
 
-#ifndef VERIFICATION_ATLER_SIMPLE_DEQUE_CUH
-#define VERIFICATION_ATLER_SIMPLE_DEQUE_CUH
+#ifndef VERIFICATION_ATLER_CUDA_DEQUE_CUH
+#define VERIFICATION_ATLER_CUDA_DEQUE_CUH
 
 #include <cuda_runtime.h>
 
@@ -11,7 +11,7 @@ namespace VerifyTAPN {
 namespace Cuda {
 
 template <typename T>
-struct SimpleDeque {
+struct CudaDeque {
     struct Node {
         T data;
         Node* prev;
@@ -25,10 +25,10 @@ struct SimpleDeque {
     size_t size;
 
     // Constructor
-    __host__ __device__ SimpleDeque() : front(nullptr), back(nullptr), size(0) {}
+    __host__ __device__ CudaDeque() : front(nullptr), back(nullptr), size(0) {}
 
     // Destructor
-    __host__ __device__ ~SimpleDeque() {
+    __host__ __device__ ~CudaDeque() {
         while (front != nullptr) {
             Node* temp = front;
             front = front->next;

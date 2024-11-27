@@ -1,5 +1,5 @@
-#ifndef VERIFYYAPN_ATLER_SIMPLETIMEDARCPETRINET_CUH_
-#define VERIFYYAPN_ATLER_SIMPLETIMEDARCPETRINET_CUH_
+#ifndef VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
+#define VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
 
 #include "DiscreteVerification/Atler/SimpleTimedInhibitorArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedInputArc.hpp"
@@ -11,26 +11,26 @@
 namespace VerifyTAPN {
 namespace Cuda {
 
-struct SimpleTimedArcPetriNet {
+struct CudaTimedArcPetriNet {
   Atler::SimpleTimedPlace *places;
   size_t placesLength;
-  Atler::SimpleTimedTransition *transitions;
+  Atler::SimpleTimedTransition **transitions;
   size_t transitionsLength;
-  Atler::SimpleTimedInputArc *inputArcs;
+  Atler::SimpleTimedInputArc **inputArcs;
   size_t inputArcsLength;
-  Atler::SimpleTimedOutputArc *outputArcs;
+  Atler::SimpleTimedOutputArc **outputArcs;
   size_t outputArcsLength;
-  Atler::SimpleTimedTransportArc *transportArcs;
+  Atler::SimpleTimedTransportArc **transportArcs;
   size_t transportArcsLength;
-  Atler::SimpleTimedInhibitorArc *inhibitorArcs;
+  Atler::SimpleTimedInhibitorArc **inhibitorArcs;
   size_t inhibitorArcsLength;
   int maxConstant;
   int gcd;
 
-  __host__ __device__ void print(std::ostream &out) const;
+  void print(std::ostream &out) const;
 };
 
 } // namespace Cuda
 }; // namespace VerifyTAPN
 
-#endif /* VERIFYYAPN_ATLER_SIMPLETIMEDARCPETRINET_CUH_ */
+#endif /* VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_ */

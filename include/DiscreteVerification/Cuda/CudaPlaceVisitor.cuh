@@ -1,23 +1,22 @@
-#ifndef SIMPLEPLACEVISITOR_CUH_
-#define SIMPLEPLACEVISITOR_CUH_
+#ifndef CUDAPLACEVISITOR_CUH_
+#define CUDAPLACEVISITOR_CUH_
 
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
-#include "DiscreteVerification/Atler/SimpleVisitor.hpp"
+#include "DiscreteVerification/Cuda/CudaVisitor.cuh"
 #include <exception>
 #include <vector>
 #include <cuda_runtime.h>
 
-namespace VerifyTAPN::Cuda {
+namespace VerifyTAPN::Cuda::AST {
 
 using namespace Atler::AST;
 
-class SimplePlaceVisitor : public SimpleVisitor {
+class CudaPlaceVisitor : public CudaVisitor {
 public:
-  __host__ __device__ SimplePlaceVisitor() = default;
+  __host__ __device__ CudaPlaceVisitor() = default;
 
-  ~SimplePlaceVisitor() override = default;
+  ~CudaPlaceVisitor() override = default;
 
-public: // visitor methods
   __host__ __device__ void visit(NotExpression &expr, Result &context) override;
 
   __host__ __device__ void visit(OrExpression &expr, Result &context) override;

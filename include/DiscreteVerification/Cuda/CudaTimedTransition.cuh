@@ -1,5 +1,5 @@
-#ifndef VERIFYTAPN_ATLER_SIMPLETIMEDTRANSITION_CUH_
-#define VERIFYTAPN_ATLER_SIMPLETIMEDTRANSITION_CUH_
+#ifndef VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_
+#define VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_
 
 #include "DiscreteVerification/Atler/SimpleStochasticStructure.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedInhibitorArc.hpp"
@@ -12,7 +12,7 @@
 
 namespace VerifyTAPN {
 namespace Cuda {
-struct SimpleTimedTransition {
+struct CudaTimedTransition {
   int index = 0;
 
   //Not sure about this
@@ -43,4 +43,4 @@ struct SimpleTimedTransition {
 } // namespace Cuda
 } // namespace VerifyTAPN
 
-#endif /* VERIFYTAPN_ATLER_SIMPLETIMEDTRANSITION_CUH_ */
+#endif /* VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_ */

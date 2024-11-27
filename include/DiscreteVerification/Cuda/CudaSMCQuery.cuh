@@ -1,12 +1,12 @@
-#ifndef SIMPLESMCQUERIES_CUH
-#define SIMPLESMCQUERIES_CUH
+#ifndef CUDASMCQUERIES_CUH
+#define CUDASMCQUERIES_CUH
 
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::Cuda::AST {
 
-struct SimpleSMCSettings {
+struct CudaSMCSettings {
   int timeBound;
   int stepBound;
   float falsePositives;
@@ -19,17 +19,17 @@ struct SimpleSMCSettings {
   float geqThan;
 };
 
-class SimpleSMCQuery : public Atler::AST::SimpleQuery {
+class CudaSMCQuery : public Atler::AST::SimpleQuery {
 public:
-  __host__ __device__ SimpleSMCQuery(Atler::AST::SimpleQuantifier quantifier, SimpleSMCSettings settings,
+  __host__ __device__ CudaSMCQuery(Atler::AST::SimpleQuantifier quantifier, CudaSMCSettings settings,
                  Atler::AST::SimpleExpression *expr)
       : SimpleQuery(quantifier, expr), smcSettings(settings) {};
 
-  __host__ __device__ SimpleSMCQuery(const SimpleSMCQuery &other)
+  __host__ __device__ CudaSMCQuery(const CudaSMCQuery &other)
       : SimpleQuery(other.quantifier, other.expr->clone()),
         smcSettings(other.smcSettings) {};
 
-  __host__ __device__ SimpleSMCQuery &operator=(const SimpleSMCQuery &other) {
+  __host__ __device__ CudaSMCQuery &operator=(const CudaSMCQuery &other) {
     if (&other != this) {
       delete expr;
       expr = other.expr->clone();
@@ -38,20 +38,20 @@ public:
     return *this;
   }
 
-  __host__ __device__ virtual SimpleSMCQuery *clone() const override;
+  __host__ __device__ virtual CudaSMCQuery *clone() const override;
 
   __host__ __device__ void accept(Atler::AST::SimpleVisitor &visitor, Atler::AST::Result &context) override;
 
-  __host__ __device__ void setSMCSettings(SimpleSMCSettings newSettings) {
+  __host__ __device__ void setSMCSettings(CudaSMCSettings newSettings) {
     smcSettings = newSettings;
   }
 
-  __host__ __device__ SimpleSMCSettings &getSmcSettings() { return smcSettings; }
+  __host__ __device__ CudaSMCSettings &getSmcSettings() { return smcSettings; }
 
 public:
   Atler::AST::SimpleQuantifier quantifier;
   Atler::AST::SimpleExpression *expr;
-  SimpleSMCSettings smcSettings;
+  CudaSMCSettings smcSettings;
 };
 
 } // namespace VerifyTAPN::Cuda::AST
