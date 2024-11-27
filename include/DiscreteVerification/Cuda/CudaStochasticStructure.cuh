@@ -4,29 +4,23 @@
 // TODO: Check if this is correct
 
 /*#include <sstream>*/
+
 #include <cuda_runtime.h>
+#include <curand.h>
+#include <curand_kernel.h>
 #include <string>
 
 namespace VerifyTAPN::Cuda::SimpleSMC {
 
 enum FiringMode { Oldest, Youngest, Random };
 
-//Not sure about this one
-__host__ __device__ const char* firingModeName(FiringMode type);
+// Not sure about this one
+__host__ __device__ const char *firingModeName(FiringMode type);
 
-enum DistributionType {
-  Constant,
-  Uniform,
-  Exponential,
-  Normal,
-  Gamma,
-  Erlang,
-  DiscreteUniform,
-  Geometric
-};
+enum DistributionType { Constant, Uniform, Exponential, Normal, Gamma, Erlang, DiscreteUniform, Geometric };
 
-//Not sure about this one
-__host__ __device__ const char* distributionName(DistributionType type);
+// Not sure about this one
+__host__ __device__ const char *distributionName(DistributionType type);
 
 struct SMCUniformParameters {
   double a;
@@ -68,33 +62,32 @@ struct Distribution {
   DistributionType type;
   DistributionParameters parameters;
 
-  template <typename T>
-   __host__ __device__ double sample(T &engine, const unsigned int precision = 0) const {
+  template <typename T> __device__ double sample(T &engine, const unsigned int precision = 0) const {
     double date = 0;
     switch (type) {
     case Constant:
-      date = parameters.constant.value;
+      // TODO
       break;
     case Uniform:
-      date = curand_uniform(parameters.uniform.a,
-                                            parameters.uniform.b)(engine);
+      // TODO
       break;
     case Exponential:
-      //TODO
+      // TODO
       break;
     case Normal:
-      date = curand_normal(parameters.normal.mean,
-                                      parameters.normal.stddev)(engine);
+      // TODO
       break;
     case Gamma:
+      // TODO
+      break;
     case Erlang:
-      //TODO
+      // TODO
       break;
     case DiscreteUniform:
-      //TODO
+      // TODO
       break;
     case Geometric:
-      //TODO
+      // TODO
       break;
     }
     if (precision > 0) {
@@ -103,6 +96,8 @@ struct Distribution {
     }
     return max(date, 0.0);
   }
+
+  __global__ void setup(curandState_t *d_states) {};
 
   __host__ __device__ static Distribution urgent();
 
@@ -113,6 +108,6 @@ struct Distribution {
   std::string toXML() const;
 };
 
-} // namespace VerifyTAPN::Atler::SimpleSMC
+} // namespace VerifyTAPN::Cuda::SimpleSMC
 
 #endif
