@@ -9,6 +9,7 @@
 #include "DiscreteVerification/Atler/SimpleStochasticStructure.hpp"
 #include "DiscreteVerification/Atler/SimpleTimeInterval.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
+#include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedTransition.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -180,13 +181,24 @@ struct AtlerRunResult {
   }
 
   SimpleRealMarking *next() {
-     auto [winner, delay] = getWinnerTransitionAndDelay();
+    auto [winner, delay] = getWinnerTransitionAndDelay();
 
-     if(delay == std::numeric_limits<double>::infinity()) {
-         maximal = true;
-         return nullptr;
-     }
+    if (delay == std::numeric_limits<double>::infinity()) {
+      maximal = true;
+      return nullptr;
+    }
 
+    parent->deltaAge(delay);
+    totalTime += delay;
+
+    parent->fromDelay = delay + parent->fromDelay;
+
+    if (winner != nullptr) {
+      totalSteps++;
+      dates_sampled.set(winner->index, std::numeric_limits<double>::infinity());
+      auto child = fire(winner);
+      // TODO: Implement fire method
+    }
   }
 
   std::pair<SimpleTimedTransition *, double> getWinnerTransitionAndDelay() {
@@ -218,48 +230,52 @@ struct AtlerRunResult {
       }
     }
     SimpleTimedTransition *winner;
-    if(winner_indexes.empty()) {
-        winner = nullptr;
+    if (winner_indexes.empty()) {
+      winner = nullptr;
     } else if (winner_indexes.size == 1) {
-        winner = tapn.transitions[winner_indexes.get(0)];
+      winner = tapn.transitions[winner_indexes.get(0)];
     } else {
-        winner = chooseWeightedWinner(winner_indexes);
+      winner = chooseWeightedWinner(winner_indexes);
     }
     return std::make_pair(winner, date_min);
   }
 
-  SimpleTimedTransition *chooseWeightedWinner(const SimpleDynamicArray<size_t> winner_indexes) {
-      double total_weight = 0;
-      SimpleDynamicArray<size_t> infinite_weights(10);
-      for (size_t i = 0; i < winner_indexes.size; i++) {
-          auto candidate = winner_indexes.get(i);
-          double priority = tapn.transitions[candidate]->_weight;
-          if (priority == std::numeric_limits<double>::infinity()) {
-              infinite_weights.add(candidate);
-          } else {
-              total_weight += priority;
-          }
+  SimpleTimedTransition *
+  chooseWeightedWinner(const SimpleDynamicArray<size_t> winner_indexes) {
+    double total_weight = 0;
+    SimpleDynamicArray<size_t> infinite_weights(10);
+    for (size_t i = 0; i < winner_indexes.size; i++) {
+      auto candidate = winner_indexes.get(i);
+      double priority = tapn.transitions[candidate]->_weight;
+      if (priority == std::numeric_limits<double>::infinity()) {
+        infinite_weights.add(candidate);
+      } else {
+        total_weight += priority;
       }
+    }
 
-      if(!infinite_weights.empty()) {
-          int winner_index = std::uniform_int_distribution<>(0, infinite_weights.size - 1)(rng);
-          return tapn.transitions[infinite_weights.get(winner_index)];
+    if (!infinite_weights.empty()) {
+      int winner_index =
+          std::uniform_int_distribution<>(0, infinite_weights.size - 1)(rng);
+      return tapn.transitions[infinite_weights.get(winner_index)];
+    }
+    if (total_weight == 0) {
+      int winner_index =
+          std::uniform_int_distribution<>(0, winner_indexes.size - 1)(rng);
+      return tapn.transitions[winner_indexes.get(winner_index)];
+    }
+    double winning_weight =
+        std::uniform_real_distribution<>(0, total_weight)(rng);
+    for (size_t i = 0; i < winner_indexes.size; i++) {
+      auto candidate = winner_indexes.get(i);
+      SimpleTimedTransition *transition = tapn.transitions[candidate];
+      winning_weight -= transition->_weight;
+      if (winning_weight <= 0) {
+        return transition;
       }
-      if(total_weight == 0) {
-          int winner_index = std::uniform_int_distribution<>(0, winner_indexes.size - 1)(rng);
-          return tapn.transitions[winner_indexes.get(winner_index)];
-     }
-     double winning_weight = std::uniform_real_distribution<>(0, total_weight)(rng);
-     for (size_t i = 0; i < winner_indexes.size; i++) {
-         auto candidate = winner_indexes.get(i);
-         SimpleTimedTransition* transition = tapn.transitions[candidate];
-         winning_weight -= transition->_weight;
-         if(winning_weight <= 0) {
-             return transition;
-         }
-     }
+    }
 
-     return tapn.transitions[winner_indexes.get(0)];
+    return tapn.transitions[winner_indexes.get(0)];
   }
 
   SimpleDynamicArray<Util::SimpleInterval>
@@ -277,8 +293,8 @@ struct AtlerRunResult {
                 << std::endl;
       auto inhib = transition.inhibitorArcs[i];
       std::cout << "Inhibitor arc 2" << std::endl;
-      if (parent->numberOfTokensInPlace(inhib.inputPlace.index) >=
-          inhib.weight) {
+      if (parent->numberOfTokensInPlace(inhib->inputPlace.index) >=
+          inhib->weight) {
         std::cout << "Inhibitor arc 3" << std::endl;
         return disabled;
       }
@@ -286,7 +302,7 @@ struct AtlerRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      auto &place = parent->places[arc.inputPlace.index];
+      auto &place = parent->places[arc->inputPlace.index];
 
       std::cout << "Preset arc" << std::endl;
       std::cout << "place name: " << place.place.name << std::endl;
@@ -298,7 +314,7 @@ struct AtlerRunResult {
       std::cout << "Preset arc 2" << std::endl;
       firingIntervals = Util::setIntersection(
           firingIntervals,
-          arcFiringDates(arc.interval, arc.weight, place.tokens));
+          arcFiringDates(arc->interval, arc->weight, place.tokens));
       if (firingIntervals.empty())
         return firingIntervals;
     }
@@ -306,19 +322,20 @@ struct AtlerRunResult {
     for (size_t i = 0; i < transition.transportArcsLength; i++) {
       std::cout << "Transport arc" << std::endl;
       auto transport = transition.transportArcs[i];
-      auto &place = parent->places[transport.source.index];
+      auto &place = parent->places[transport->source.index];
       if (place.isEmpty())
         return disabled;
 
-      SimpleTimeInvariant targetInvariant = transport.destination.timeInvariant;
-      SimpleTimeInterval arcInterval = transport.interval;
+      SimpleTimeInvariant targetInvariant =
+          transport->destination.timeInvariant;
+      SimpleTimeInterval arcInterval = transport->interval;
       if (targetInvariant.bound < arcInterval.upperBound) {
         arcInterval.setUpperBound(targetInvariant.bound,
                                   targetInvariant.isBoundStrict);
       }
       firingIntervals = Util::setIntersection(
           firingIntervals,
-          arcFiringDates(arcInterval, transport.weight, place.tokens));
+          arcFiringDates(arcInterval, transport->weight, place.tokens));
       if (firingIntervals.empty())
         return firingIntervals;
     }
@@ -329,7 +346,7 @@ struct AtlerRunResult {
 
   SimpleDynamicArray<Util::SimpleInterval>
   arcFiringDates(SimpleTimeInterval time_interval, uint32_t weight,
-                 SimpleDynamicArray<SimpleRealToken> tokens) {
+                 SimpleDynamicArray<SimpleRealToken*> tokens) {
 
     std::cout << "Arc firing dates" << std::endl;
     Util::SimpleInterval arcInterval(time_interval.lowerBound,
@@ -337,7 +354,7 @@ struct AtlerRunResult {
     size_t total_tokens = 0;
     std::cout << "tokens size: " << tokens.size << std::endl;
     for (size_t i = 0; i < tokens.size; i++) {
-      total_tokens += tokens.get(i).count;
+      total_tokens += tokens.get(i)->count;
     }
     std::cout << "Arc firing dates" << std::endl;
     if (total_tokens < weight)
@@ -346,8 +363,8 @@ struct AtlerRunResult {
     SimpleDynamicArray<Util::SimpleInterval> firingIntervals(10);
     SimpleDeque<double> selected = SimpleDeque<double>();
     for (size_t i = 0; i < tokens.size; i++) {
-      for (int j = 0; j < tokens.get(i).count; j++) {
-        selected.push_back(tokens.get(i).age);
+      for (int j = 0; j < tokens.get(i)->count; j++) {
+        selected.push_back(tokens.get(i)->age);
         if (selected.size > weight) {
           selected.pop_front();
         }
@@ -364,6 +381,134 @@ struct AtlerRunResult {
       }
     }
     return firingIntervals;
+  }
+
+  SimpleDynamicArray<SimpleRealToken *>
+  removeRandom(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+               const SimpleTimeInterval &interval, const int weight) {
+    auto res = SimpleDynamicArray<SimpleRealToken *>(tokenList.size);
+    int remaning = weight;
+    std::uniform_int_distribution<> randomTokenIndex(0, tokenList.size - 1);
+    size_t tok_index = randomTokenIndex(rng);
+    size_t tested = 0;
+
+    while (remaning > 0 && tested < tokenList.size) {
+      SimpleRealToken *token = tokenList.get(tok_index);
+      if (interval.contains(token->age)) {
+        res.add(new SimpleRealToken{.age = token->age, .count = 1});
+        remaning--;
+        tokenList.get(tok_index)->remove(1);
+        if (tokenList.get(tok_index)->count == 0) {
+          tokenList.remove(tok_index);
+          randomTokenIndex =
+              std::uniform_int_distribution<>(0, tokenList.size - 1);
+        }
+        if (remaning > 0) {
+          tok_index = randomTokenIndex(rng);
+          tested = 0;
+        }
+      } else {
+        tok_index = (tok_index + 1) % tokenList.size;
+      }
+    }
+    assert(remaning == 0);
+    return res;
+  }
+
+  SimpleDynamicArray<SimpleRealToken *>
+  removeYoungest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+                 const SimpleTimeInterval &interval, const int weight) {
+
+    auto res = SimpleDynamicArray<SimpleRealToken *>();
+    int remaining = weight;
+    for (size_t i = 0; i < tokenList.size; i++) {
+      auto token = tokenList.get(i);
+      double age = token->age;
+      if (!interval.contains(age)) {
+        continue;
+      }
+      int count = token->count;
+      if (count >= remaining) {
+        res.add(new SimpleRealToken{.age = age, .count = count});
+        token->remove(remaining);
+        if (token->count == 0)
+          tokenList.remove(i);
+        remaining = 0;
+        break;
+      } else {
+        res.add(new SimpleRealToken{.age = age, .count = count});
+        remaining -= count;
+        tokenList.remove(i);
+      }
+    }
+
+    assert(remaining == 0);
+    return res;
+  }
+
+  // NOTE: Double check this method to ensure it is correct
+  SimpleDynamicArray<SimpleRealToken *>
+  removeOldest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+               const SimpleTimeInterval &timeInterval, const int weight) {
+    auto res = SimpleDynamicArray<SimpleRealToken *>();
+    int remaining = weight;
+    // for loop in reverse order
+    for (int i = tokenList.size - 1; i >= 0; i--) {
+      auto token = tokenList.get(i);
+      double age = token->age;
+      if (!timeInterval.contains(age)) {
+        continue;
+      }
+      int count = token->count;
+      if (count >= remaining) {
+        res.add(new SimpleRealToken{.age = age, .count = count});
+        token->remove(remaining);
+        if (token->count == 0)
+          tokenList.remove(i);
+        remaining = 0;
+        break;
+      } else {
+        res.add(new SimpleRealToken{.age = age, .count = count});
+        remaining -= count;
+        tokenList.remove(i);
+      }
+    }
+    assert(remaining == 0);
+    return res;
+  }
+
+  SimpleRealMarking *fire(SimpleTimedTransition *transition) {
+    if (transition == nullptr) {
+      assert(false);
+      return nullptr;
+    }
+
+    auto *child = parent->clone();
+    SimpleRealPlace *placeList = child->places;
+
+    for (size_t i = 0; i < transition->presetLength; i++) {
+      SimpleTimedInputArc *input = transition->preset[i];
+      SimpleRealPlace &place =
+          placeList[transition->preset[i]->inputPlace.index];
+      SimpleDynamicArray<SimpleRealToken*> &tokenList = place.tokens;
+      switch (transition->_firingMode) {
+          case SimpleSMC::FiringMode::Random:
+                removeRandom(tokenList, input->interval, input->weight);
+                break;
+          case SimpleSMC::FiringMode::Oldest:
+                removeOldest(tokenList, input->interval, input->weight);
+                break;
+          case SimpleSMC::FiringMode::Youngest:
+                removeYoungest(tokenList, input->interval, input->weight);
+                break;
+          default:
+                removeOldest(tokenList, input->interval, input->weight);
+                break;
+      }
+
+      SimpleDynamicArray<std::tuple<SimpleTimedPlace&, SimpleRealToken*>> placeTokens{};
+    }
+    return child;
   }
 };
 ;

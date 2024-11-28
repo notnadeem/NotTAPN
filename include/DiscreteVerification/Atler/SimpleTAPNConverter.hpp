@@ -34,11 +34,11 @@ public:
     std::unordered_map<const TAPN::OutputArc *, SimpleTimedOutputArc *>
         outputArcMap;
 
-    auto places = new SimpleTimedPlace[tapn.getPlaces().size()];
+    auto places = new SimpleTimedPlace *[tapn.getPlaces().size()];
     for (size_t i = 0; i < tapn.getPlaces().size(); i++) {
       auto originalPlace = tapn.getPlaces()[i];
-      places[i] = convertPlace(*originalPlace);
-      placeMap[originalPlace] = &places[i];
+      places[i] = new SimpleTimedPlace(convertPlace(*originalPlace));
+      placeMap[originalPlace] = places[i];
     }
 
     auto transitions =
@@ -156,7 +156,7 @@ public:
         inputArcs[j] = inputArcMap.at(originalArc);
       }
 
-      simpleTransition->preset = *inputArcs;
+      simpleTransition->preset = inputArcs;
       simpleTransition->presetLength = originalTransition->getPreset().size();
 
       auto outputArcs =
@@ -166,7 +166,7 @@ public:
         outputArcs[j] = outputArcMap.at(originalArc);
       }
 
-      simpleTransition->postset = *outputArcs;
+      simpleTransition->postset = outputArcs;
       simpleTransition->postsetLength = originalTransition->getPostset().size();
 
       auto transportArcs = new SimpleTimedTransportArc
@@ -177,7 +177,7 @@ public:
         transportArcs[j] = transportArcMap.at(originalArc);
       }
 
-      simpleTransition->transportArcs = *transportArcs;
+      simpleTransition->transportArcs = transportArcs;
       simpleTransition->transportArcsLength =
           originalTransition->getTransportArcs().size();
 
@@ -190,7 +190,7 @@ public:
         inhibitorArcs[j] = inhibitorArcMap.at(originalArc);
       }
 
-      simpleTransition->inhibitorArcs = *inhibitorArcs;
+      simpleTransition->inhibitorArcs = inhibitorArcs;
       simpleTransition->inhibitorArcsLength =
           originalTransition->getInhibitorArcs().size();
     }

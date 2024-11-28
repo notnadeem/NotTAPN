@@ -16,13 +16,13 @@ struct SimpleTimedTransition {
   std::string name;
   std::string id;
 
-  SimpleTimedInputArc* preset = nullptr;
+  SimpleTimedInputArc** preset = nullptr;
   size_t presetLength = 0;
-  SimpleTimedOutputArc* postset = nullptr;
+  SimpleTimedOutputArc** postset = nullptr;
   size_t postsetLength = 0;
-  SimpleTimedTransportArc* transportArcs = nullptr;
+  SimpleTimedTransportArc** transportArcs = nullptr;
   size_t transportArcsLength = 0;
-  SimpleTimedInhibitorArc* inhibitorArcs = nullptr;
+  SimpleTimedInhibitorArc** inhibitorArcs = nullptr;
   size_t inhibitorArcsLength = 0;
 
   bool untimedPostset = false;

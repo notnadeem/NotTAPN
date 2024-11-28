@@ -36,6 +36,7 @@ template <typename T> struct SimpleDynamicArray {
     arr[size++] = value;
   }
 
+  // NOTE: This function is not efficient, it is only used for simplicity
   void remove(size_t index) {
     if (index >= size) {
       throw std::out_of_range("Index out of bounds");
@@ -46,8 +47,19 @@ template <typename T> struct SimpleDynamicArray {
     size--;
   }
 
+  // NOTE: This might not be necessary for the implementation of the algorithm
+  void remove(size_t index, size_t count) {
+    if (index >= size) {
+      throw std::out_of_range("Index out of bounds");
+    }
+    for (size_t i = index; i < size - count; i++) {
+      arr[i] = arr[i + count];
+    }
+    size -= count;
+  }
+
+  // NOTE: if the array contains pointers, we need to delete them and set all the values to nullptr
   void clear() {
-    // NOTE: if the array contains pointers, we need to delete them and set all the values to nullptr
     size = 0;
   }
 
