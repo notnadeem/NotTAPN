@@ -89,8 +89,7 @@ namespace VerifyTAPN::Cuda::SimpleSMC
     DistributionType type;
     DistributionParameters parameters;
 
-    template <typename T>
-    __device__ double sample(T &engine, const unsigned int precision = 0) const
+    __device__ double sample(curandState_t* state, const unsigned int precision = 0) const
     {
       double date = 0;
       switch (type)
