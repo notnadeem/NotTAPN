@@ -8,10 +8,18 @@
 #include "Core/Query/SMCQuery.hpp"
 #include "DiscreteVerification/DataStructures/RealMarking.hpp"
 #include "DiscreteVerification/VerificationTypes/Verification.hpp"
+#include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
 
 namespace VerifyTAPN::DiscreteVerification {
 
-class AtlerProbabilityEstimation : public Verification<RealMarking> {
+class AtlerProbabilityEstimation  {
+
+    protected:
+        TAPN::TimedArcPetriNet &tapn;
+        RealMarking &initialMarking;
+        AST::Query *query;
+        VerificationOptions options;
+        std::vector<int> placeStats{};
 
     public:
       AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn,
@@ -21,7 +29,7 @@ class AtlerProbabilityEstimation : public Verification<RealMarking> {
       AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn,
                                  RealMarking &initialMarking, AST::SMCQuery *query,
                                  VerificationOptions options, unsigned int runs)
-          : Verification(tapn, initialMarking, query, options), numberOfRuns(0),
+          : tapn(tapn), initialMarking(initialMarking), query(query), options(options), numberOfRuns(0),
             maxTokensSeen(0), smcSettings(query->getSmcSettings()), validRuns(0),
             runsNeeded(runs) {}
 
@@ -36,16 +44,16 @@ class AtlerProbabilityEstimation : public Verification<RealMarking> {
       //       {}
 
       // Main execution methods
-      bool run() override;
+      bool run() ;
       bool parallel_run();
 
       // Core functionality
       // void prepare();
       // bool executeRun(SMCRunGenerator *generator);
-      unsigned int maxUsedTokens() override;
+      unsigned int maxUsedTokens() ;
       void setMaxTokensIfGreater(unsigned int i);
       bool mustDoAnotherRun();
-      bool handleSuccessor(RealMarking *marking) override;
+      bool handleSuccessor(Atler::SimpleRealMarking *marking);
       float getEstimation();
       void computeChernoffHoeffdingBound(const float intervalWidth,
                                          const float confidence);
@@ -54,8 +62,8 @@ class AtlerProbabilityEstimation : public Verification<RealMarking> {
 
       // Printing and output methods
       void printResult();
-      void printStats() override;
-      void printTransitionStatistics() const override;
+      void printStats() ;
+      void printTransitionStatistics() const ;
       void printHumanTrace(std::stack<RealMarking *> &stack,
                        const std::string &name);
   void printXMLTrace(std::stack<RealMarking *> &stack, const std::string &name,

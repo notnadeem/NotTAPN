@@ -85,7 +85,7 @@ struct AtlerRunResult {
 
     for (size_t i = 0; i < tapn.transitionsLength; i++) {
       std::cout << "Intersecting transition no: " << i << std::endl;
-      auto transition = tapn.transitions[i];
+      SimpleTimedTransition *transition = tapn.transitions[i];
       // print transition length
       std::cout << "Inhibitor length first: " << transition->inhibitorArcsLength
                 << std::endl;
@@ -194,11 +194,22 @@ struct AtlerRunResult {
     parent->fromDelay = delay + parent->fromDelay;
 
     if (winner != nullptr) {
-      totalSteps++;
+        std::cout << "Winner: " << winner->name << std::endl;
+        totalSteps++;
       dates_sampled.set(winner->index, std::numeric_limits<double>::infinity());
       auto child = fire(winner);
-      // TODO: Implement fire method
+      child->generatedBy = winner;
+      delete parent;
+      parent = child;
     }
+
+    for (size_t i = 0; i < transitionIntervals.size; i++) {
+        double date = dates_sampled.get(i);
+        double newVal = (date == std::numeric_limits<double>::infinity()) ? std::numeric_limits<double>::infinity() : date - delay;
+    }
+
+    refreshTransitionsIntervals();
+    return parent;
   }
 
   std::pair<SimpleTimedTransition *, double> getWinnerTransitionAndDelay() {
@@ -346,7 +357,7 @@ struct AtlerRunResult {
 
   SimpleDynamicArray<Util::SimpleInterval>
   arcFiringDates(SimpleTimeInterval time_interval, uint32_t weight,
-                 SimpleDynamicArray<SimpleRealToken*> tokens) {
+                 SimpleDynamicArray<SimpleRealToken *> tokens) {
 
     std::cout << "Arc firing dates" << std::endl;
     Util::SimpleInterval arcInterval(time_interval.lowerBound,
@@ -483,35 +494,76 @@ struct AtlerRunResult {
       return nullptr;
     }
 
-    auto *child = parent->clone();
+    SimpleRealMarking *child = parent->clone();
     SimpleRealPlace *placeList = child->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       SimpleTimedInputArc *input = transition->preset[i];
       SimpleRealPlace &place =
           placeList[transition->preset[i]->inputPlace.index];
-      SimpleDynamicArray<SimpleRealToken*> &tokenList = place.tokens;
+      SimpleDynamicArray<SimpleRealToken *> &tokenList = place.tokens;
       switch (transition->_firingMode) {
-          case SimpleSMC::FiringMode::Random:
-                removeRandom(tokenList, input->interval, input->weight);
-                break;
-          case SimpleSMC::FiringMode::Oldest:
-                removeOldest(tokenList, input->interval, input->weight);
-                break;
-          case SimpleSMC::FiringMode::Youngest:
-                removeYoungest(tokenList, input->interval, input->weight);
-                break;
-          default:
-                removeOldest(tokenList, input->interval, input->weight);
-                break;
+      case SimpleSMC::FiringMode::Random:
+        removeRandom(tokenList, input->interval, input->weight);
+        break;
+      case SimpleSMC::FiringMode::Oldest:
+        removeOldest(tokenList, input->interval, input->weight);
+        break;
+      case SimpleSMC::FiringMode::Youngest:
+        removeYoungest(tokenList, input->interval, input->weight);
+        break;
+      default:
+        removeOldest(tokenList, input->interval, input->weight);
+        break;
       }
 
-      SimpleDynamicArray<std::tuple<SimpleTimedPlace&, SimpleRealToken*>> placeTokens{};
+      auto toCreate =
+          SimpleDynamicArray<std::pair<SimpleTimedPlace *, SimpleRealToken *>>(
+              10);
+      for (size_t i = 0; i < transition->transportArcsLength; i++) {
+        auto transport = transition->transportArcs[i];
+        int destInv = transport->destination.timeInvariant.bound;
+        SimpleRealPlace &place = placeList[transport->source.index];
+        SimpleDynamicArray<SimpleRealToken *> &tokenList = place.tokens;
+        SimpleDynamicArray<SimpleRealToken *> consumed(10);
+        SimpleTimeInterval &arcInterval = transport->interval;
+        if (destInv < arcInterval.upperBound)
+          arcInterval.setUpperBound(destInv, false);
+        switch (transition->_firingMode) {
+        case SimpleSMC::FiringMode::Random:
+          consumed = removeRandom(tokenList, arcInterval, transport->weight);
+          break;
+        case SimpleSMC::FiringMode::Oldest:
+          consumed = removeOldest(tokenList, arcInterval, transport->weight);
+          break;
+        case SimpleSMC::FiringMode::Youngest:
+          consumed = removeYoungest(tokenList, arcInterval, transport->weight);
+          break;
+        default:
+          consumed = removeOldest(tokenList, arcInterval, transport->weight);
+          break;
+        }
+        for (size_t j = 0; j < consumed.size; j++) {
+          toCreate.add(
+              std::make_pair(&(transport->destination), consumed.get(j)));
+        }
+      }
+
+      for (size_t i = 0; i < transition->postsetLength; i++) {
+        SimpleTimedPlace &place = transition->postset[i]->outputPlace;
+        SimpleTimedOutputArc *post = transition->postset[i];
+        auto token = SimpleRealToken{.age = 0.0,
+                                     .count = static_cast<int>(post->weight)};
+        child->addTokenInPlace(place, token);
+      }
+      for (size_t i = 0; i < toCreate.size; i++) {
+          auto [place, token] = toCreate.get(i);
+          child->addTokenInPlace(*place, *token);
+      }
     }
     return child;
   }
 };
-;
 } // namespace VerifyTAPN::Atler
 
 #endif

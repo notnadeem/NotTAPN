@@ -234,7 +234,7 @@ public:
       // Create and initialize SimpleRealToken array with converted tokens
       size_t tokenLength = realPlace.tokens.size();
       for (size_t j = 0; j < tokenLength; j++) {
-        srm.places[i].tokens.add(SimpleRealToken{
+        srm.places[i].tokens.add(new SimpleRealToken{
             realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
       }
 
