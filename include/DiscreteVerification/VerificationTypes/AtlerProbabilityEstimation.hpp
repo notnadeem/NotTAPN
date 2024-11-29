@@ -6,6 +6,7 @@
 // #include "../VerificationTypes/Verification.hpp"
 
 #include "Core/Query/SMCQuery.hpp"
+#include "DiscreteVerification/Atler/AtlerRunResult.hpp"
 #include "DiscreteVerification/DataStructures/RealMarking.hpp"
 #include "DiscreteVerification/VerificationTypes/Verification.hpp"
 #include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
@@ -57,7 +58,7 @@ class AtlerProbabilityEstimation  {
       float getEstimation();
       void computeChernoffHoeffdingBound(const float intervalWidth,
                                          const float confidence);
-      // bool reachedRunBound(SMCRunGenerator *generator);
+      bool reachedRunBound(Atler::AtlerRunResult *generator);
       // void handleRunResult(const bool res, int steps, double delay);
 
       // Printing and output methods

@@ -57,30 +57,31 @@ bool AtlerProbabilityEstimation::run() {
 
   std::cout << "Creating run generator..." << std::endl;
   auto runres = Atler::AtlerRunResult(stapn);
-  std::cout << "Run prepare " << std::endl;
+  std::cout << "Run prepare" << std::endl;
   runres.prepare(siMarking);
 
-  auto clones =
-      new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
-  for (int i = 0; i < runsNeeded; i++) {
-    clones->add(runres.copy());
-  }
+  // auto clones =
+  //     new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
+  // for (int i = 0; i < runsNeeded; i++) {
+  //   clones->add(runres.copy());
+  // }
 
   int count = 0;
   int success = 0;
-  for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult *runner = clones->get(i);
+  for (int i = 0; i < 1; i++) {
+    auto runner = new Atler::AtlerRunResult(stapn);
+    runner->prepare(siMarking);
+    // Atler::AtlerRunResult *runner = clones->get(i);
     // runner->reset();
     bool runRes = false;
     Atler::SimpleRealMarking *newMarking = runner->parent;
-    while (!runner->maximal && !(runner->totalTime >= smcSettings.timeBound ||
-                                 runner->totalSteps >= smcSettings.stepBound)) {
+    while (!runner->maximal && !(reachedRunBound(runner))) {
 
       // print value of maximal
       std::cout << "Max: " << runner->maximal << std::endl;
 
       Atler::SimpleRealMarking child = *newMarking->clone();
-      Atler::SimpleQueryVisitor checker(child, stapn);
+      Atler::SimpleQueryVisitor checker(*newMarking, stapn);
       Atler::AST::BoolResult result;
 
       simpleSMCQuery->accept(checker, result);
@@ -129,6 +130,11 @@ bool AtlerProbabilityEstimation::run() {
   return false;
 }
 
+bool AtlerProbabilityEstimation::reachedRunBound(Atler::AtlerRunResult *generator) {
+      return generator->totalTime >= smcSettings.timeBound ||
+             generator->totalSteps >= smcSettings.stepBound;
+};
+
 bool AtlerProbabilityEstimation::parallel_run() { return false; }
 
 // void AtlerProbabilityEstimation::prepare() { return; }
@@ -150,10 +156,10 @@ bool AtlerProbabilityEstimation::mustDoAnotherRun() {
   return numberOfRuns < runsNeeded;
 }
 
-// bool AtlerProbabilityEstimation::handleSuccessor(
-//     Atler::SimpleRealMarking *marking) {
-//         return false;
-// }
+bool AtlerProbabilityEstimation::handleSuccessor(
+    Atler::SimpleRealMarking *marking) {
+        return false;
+}
 
 float AtlerProbabilityEstimation::getEstimation() {
   float proba = ((float)validRuns) / numberOfRuns;

@@ -74,7 +74,7 @@ struct SimpleInterval {
   }
 };
 
-SimpleInterval intersect(const SimpleInterval &l, const SimpleInterval r) {
+inline SimpleInterval intersect(const SimpleInterval &l, const SimpleInterval r) {
   if (l.empty())
     return l;
   if (r.empty())
@@ -83,17 +83,17 @@ SimpleInterval intersect(const SimpleInterval &l, const SimpleInterval r) {
   return n;
 }
 
-SimpleInterval hull(const SimpleInterval &l, const SimpleInterval r) {
+inline SimpleInterval hull(const SimpleInterval &l, const SimpleInterval r) {
   return SimpleInterval(std::min(l.low, r.low), std::max(l.high, r.high));
 }
 
-bool overlap(const SimpleInterval &l, const SimpleInterval r) {
+inline bool overlap(const SimpleInterval &l, const SimpleInterval r) {
   auto i = intersect(l, r);
   return !i.empty();
 }
 
 // Fix both setAdd and setIntersection later
-void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterval &element) {
+inline void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterval &element) {
     for (unsigned int i = 0; i < first.size; i++) {
 
         if (element.upper() < first.get(i).lower()) {
@@ -121,7 +121,7 @@ void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterval &ele
     first.add(element);
 }
 
-SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArray<SimpleInterval>& first, const SimpleDynamicArray<SimpleInterval>& second) {
+inline SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArray<SimpleInterval>& first, const SimpleDynamicArray<SimpleInterval>& second) {
     SimpleDynamicArray<SimpleInterval> result = SimpleDynamicArray<SimpleInterval>(first.size + second.size);
 
     std::cout << "Interception" << std::endl;
