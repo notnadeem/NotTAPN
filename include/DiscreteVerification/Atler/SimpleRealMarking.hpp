@@ -23,7 +23,7 @@ struct SimpleRealPlace {
   SimpleTimedPlace place;
   SimpleDynamicArray<SimpleRealToken *> tokens;
 
-  SimpleRealPlace() { tokens = SimpleDynamicArray<SimpleRealToken *>(); }
+  SimpleRealPlace() { tokens = SimpleDynamicArray<SimpleRealToken *>(10); }
 
   SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength) : place(place) {
     tokens = SimpleDynamicArray<SimpleRealToken *>(tokensLength);
@@ -89,14 +89,13 @@ struct SimpleRealMarking {
   bool deadlocked;
   const SimpleTimedTransition *generatedBy = nullptr;
   double fromDelay = 0.0;
-  // static std::vector<SimpleRealToken> emptyTokenList;
 
   SimpleRealMarking() {
-    places = new SimpleRealPlace[placesLength];
-    deadlocked = false;
-    generatedBy = nullptr;
-    fromDelay = 0.0;
-  }
+      places = new SimpleRealPlace[0];
+      deadlocked = false;
+      generatedBy = nullptr;
+      fromDelay = 0.0;
+    }
 
   SimpleRealMarking(size_t placesLength) : placesLength(placesLength) {
     places = new SimpleRealPlace[placesLength];
@@ -105,34 +104,30 @@ struct SimpleRealMarking {
     fromDelay = 0.0;
   }
 
-  // NOTE: (For CUDA) You don't have to care about the destructor
-  // Or just use teh cudaFree() function
-  // Also not sure if destructors work in CUDA
-  // ~SimpleRealMarking() {
-  //     delete[] places;
-  // }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
       places[i].deltaAge(x);
     }
   }
-
   SimpleRealMarking *clone() const {
-    SimpleRealMarking *result = new SimpleRealMarking();
-    result->placesLength = placesLength;
-    result->places = new SimpleRealPlace[placesLength];
-    for (size_t i = 0; i < placesLength; i++) {
-      result->places[i].place = places[i].place;
-      for (size_t j = 0; j < places[i].tokens.size; j++) {
-        result->places[i].tokens.add(places[i].tokens.get(j));
+      SimpleRealMarking *result = new SimpleRealMarking();
+      result->placesLength = placesLength;
+      result->places = new SimpleRealPlace[placesLength];
+      for (size_t i = 0; i < placesLength; i++) {
+        result->places[i].place = places[i].place;
+        for (size_t j = 0; j < places[i].tokens.size; j++) {
+          SimpleRealToken* newToken = new SimpleRealToken();
+          newToken->age = places[i].tokens.get(j)->age;
+          newToken->count = places[i].tokens.get(j)->count;
+          result->places[i].tokens.add(newToken);
+        }
       }
+      result->deadlocked = deadlocked;
+      result->generatedBy = generatedBy;
+      result->fromDelay = fromDelay;
+      return result;
     }
-    result->deadlocked = deadlocked;
-    result->generatedBy = generatedBy;
-    result->fromDelay = fromDelay;
-    return result;
-  }
 
   uint32_t numberOfTokensInPlace(int placeId) const {
     return places[placeId].totalTokenCount();

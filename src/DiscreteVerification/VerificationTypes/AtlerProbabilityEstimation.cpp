@@ -60,35 +60,49 @@ bool AtlerProbabilityEstimation::run() {
   std::cout << "Run prepare " << std::endl;
   runres.prepare(siMarking);
 
-  Atler::SimpleDynamicArray<Atler::AtlerRunResult *> clones(runsNeeded);
+  auto clones =
+      new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
   for (int i = 0; i < runsNeeded; i++) {
-    clones.add(new Atler::AtlerRunResult(runres));
+    clones->add(runres.copy());
   }
 
-  for (int i = 0; i < 1; i++) {
-    Atler::AtlerRunResult *runner = clones.get(i);
+  int count = 0;
+  int success = 0;
+  for (int i = 0; i < runsNeeded; i++) {
+    Atler::AtlerRunResult *runner = clones->get(i);
+    // runner->reset();
     bool runRes = false;
     Atler::SimpleRealMarking *newMarking = runner->parent;
-    int count = 0;
     while (!runner->maximal && !(runner->totalTime >= smcSettings.timeBound ||
                                  runner->totalSteps >= smcSettings.stepBound)) {
-      Atler::SimpleQueryVisitor checker(*newMarking, stapn);
+
+      // print value of maximal
+      std::cout << "Max: " << runner->maximal << std::endl;
+
+      Atler::SimpleRealMarking child = *newMarking->clone();
+      Atler::SimpleQueryVisitor checker(child, stapn);
       Atler::AST::BoolResult result;
 
       simpleSMCQuery->accept(checker, result);
-      runRes =  result.value;
+      runRes = result.value;
+
       if (runRes) {
-          break;
+        std::cout << "Success" << runRes << std::endl;
+        success++;
+        break;
       }
+
       newMarking = runner->next();
 
-      std::cout << "Checking: " << count << "/" << runsNeeded << std::endl;
+      std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
       std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
       std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
       std::cout << "Total time: " << runner->totalTime << std::endl;
       std::cout << "Total steps: " << runner->totalSteps << std::endl;
-      count++;
+      // std::cout << "After Max: " << runner->maximal << std::endl;
     }
+    std::cout << "Number of runs: " << count << std::endl;
+    std::cout << "Success: " << success << std::endl;
   }
 
   // Create clones of the run generator

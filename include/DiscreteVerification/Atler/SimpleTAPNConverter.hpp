@@ -234,6 +234,8 @@ public:
       // Create and initialize SimpleRealToken array with converted tokens
       size_t tokenLength = realPlace.tokens.size();
       for (size_t j = 0; j < tokenLength; j++) {
+          //print token count
+          std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
         srm.places[i].tokens.add(new SimpleRealToken{
             realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
       }
