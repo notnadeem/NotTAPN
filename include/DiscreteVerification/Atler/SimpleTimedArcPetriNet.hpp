@@ -11,7 +11,7 @@ namespace VerifyTAPN {
 namespace Atler {
 
 struct SimpleTimedArcPetriNet {
-  SimpleTimedPlace *places;
+  SimpleTimedPlace **places;
   size_t placesLength;
   SimpleTimedTransition **transitions;
   size_t transitionsLength;

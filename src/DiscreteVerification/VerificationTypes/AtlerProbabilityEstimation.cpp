@@ -1,15 +1,16 @@
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 #include "DiscreteVerification/Atler/AtlerRunResult.hpp"
+#include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
 #include "DiscreteVerification/Atler/SimpleInterval.hpp"
 #include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
+#include "DiscreteVerification/Atler/SimpleQueryVisitor.hpp"
 #include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
 #include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
-#include "DiscreteVerification/QueryVisitor.hpp"
 #include <iomanip>
 #include <vector>
 
@@ -26,9 +27,9 @@ namespace VerifyTAPN::DiscreteVerification {
 AtlerProbabilityEstimation::AtlerProbabilityEstimation(
     TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking,
     AST::SMCQuery *query, VerificationOptions options)
-    : Verification(tapn, initialMarking, query, options), numberOfRuns(0),
-      maxTokensSeen(0), smcSettings(query->getSmcSettings()), validRuns(0),
-      runsNeeded(0) {
+    : tapn(tapn), initialMarking(initialMarking), query(query),
+      options(options), numberOfRuns(0), maxTokensSeen(0),
+      smcSettings(query->getSmcSettings()), validRuns(0), runsNeeded(0) {
   computeChernoffHoeffdingBound(smcSettings.estimationIntervalWidth,
                                 smcSettings.confidence);
 }
@@ -59,17 +60,52 @@ bool AtlerProbabilityEstimation::run() {
   std::cout << "Run prepare " << std::endl;
   runres.prepare(siMarking);
 
-  Atler::SimpleDynamicArray<Atler::AtlerRunResult*> clones(runsNeeded);
+  auto clones =
+      new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
   for (int i = 0; i < runsNeeded; i++) {
-      clones.add(new Atler::AtlerRunResult(runres));
+    clones->add(runres.copy());
   }
 
-  for (int i = 0; i < clones.size; i++) {
+  int count = 0;
+  int success = 0;
+  for (int i = 0; i < runsNeeded; i++) {
+    Atler::AtlerRunResult *runner = clones->get(i);
+    // runner->reset();
+    bool runRes = false;
+    Atler::SimpleRealMarking *newMarking = runner->parent;
+    while (!runner->maximal && !(runner->totalTime >= smcSettings.timeBound ||
+                                 runner->totalSteps >= smcSettings.stepBound)) {
 
+      // print value of maximal
+      std::cout << "Max: " << runner->maximal << std::endl;
+
+      Atler::SimpleRealMarking child = *newMarking->clone();
+      Atler::SimpleQueryVisitor checker(child, stapn);
+      Atler::AST::BoolResult result;
+
+      simpleSMCQuery->accept(checker, result);
+      runRes = result.value;
+
+      if (runRes) {
+        std::cout << "Success" << runRes << std::endl;
+        success++;
+        break;
+      }
+
+      newMarking = runner->next();
+
+      std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
+      std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
+      std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
+      std::cout << "Total time: " << runner->totalTime << std::endl;
+      std::cout << "Total steps: " << runner->totalSteps << std::endl;
+      // std::cout << "After Max: " << runner->maximal << std::endl;
+    }
+    std::cout << "Number of runs: " << count << std::endl;
+    std::cout << "Success: " << success << std::endl;
   }
 
   // Create clones of the run generator
-
 
   // print all the transition intervals
   // for (size_t i = 0; i < runres.transitionIntervals.size; i++) {
@@ -114,15 +150,10 @@ bool AtlerProbabilityEstimation::mustDoAnotherRun() {
   return numberOfRuns < runsNeeded;
 }
 
-bool AtlerProbabilityEstimation::handleSuccessor(RealMarking *marking) {
-  QueryVisitor<RealMarking> checker(*marking, tapn);
-  AST::BoolResult context;
-  query->accept(checker, context);
-
-  delete marking;
-
-  return context.value;
-}
+// bool AtlerProbabilityEstimation::handleSuccessor(
+//     Atler::SimpleRealMarking *marking) {
+//         return false;
+// }
 
 float AtlerProbabilityEstimation::getEstimation() {
   float proba = ((float)validRuns) / numberOfRuns;
