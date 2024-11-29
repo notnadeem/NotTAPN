@@ -5,8 +5,7 @@
 #include "DiscreteVerification/Atler/SimpleTimedInhibitorArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedInputArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedOutputArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedTransportArc.hpp"
-#include <string>
+#include "DiscreteVerification/Cuda/CudaTimedTransportArc.cuh"
 
 #include <cuda_runtime.h>
 
@@ -23,7 +22,7 @@ struct CudaTimedTransition {
   int presetLength = 0;
   Atler::SimpleTimedOutputArc** postset = nullptr;
   int postsetLength = 0;
-  Atler::SimpleTimedTransportArc** transportArcs = nullptr;
+  CudaTimedTransportArc** transportArcs = nullptr;
   int transportArcsLength = 0;
   Atler::SimpleTimedInhibitorArc** inhibitorArcs = nullptr;
   int inhibitorArcsLength = 0;

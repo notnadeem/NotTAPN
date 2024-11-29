@@ -9,7 +9,7 @@
 
 namespace VerifyTAPN {
 namespace Atler {
-
+// TODO change to cuda because of arcs
 enum PlaceType { Inv, Dead, Std };
 
 struct SimpleTimedPlace {

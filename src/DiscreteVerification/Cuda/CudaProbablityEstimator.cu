@@ -1,56 +1,52 @@
-#include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 #include "DiscreteVerification/Atler/AtlerRunResult.hpp"
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
-#include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
+#include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Atler/SimpleInterval.hpp"
 #include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
-#include "DiscreteVerification/Atler/SimpleQueryVisitor.hpp"
-#include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
-#include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
+#include "DiscreteVerification/Cuda/CudaQueryVisitor.cuh"
 #include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
+#include "DiscreteVerification/Cuda/CudaRealMarking.cuh"
+#include "DiscreteVerification/Cuda/CudaSMCQuery.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedArcPetriNet.cuh"
+
 #include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
+#include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
+__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *stapn, Cuda::CudaRealMarking *initialMarking,
+                                    Cuda::AST::CudaSMCQuery *query,
+                                    Cuda::CudaDynamicArray<Atler::AtlerRunResult *> *clones, int *timeBound,
+                                    int *stepBound, int *successCount, int *runsNeeded) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int runNeed = *runsNeeded;
+  int tBound = *timeBound;
+  int sBound = *stepBound;
+  if (tid >= runNeed) return;
+  // TODO Change to cudarunsresult
+  Atler::AtlerRunResult *origRunner = clones->get(tid);
+  // Create local copy of the runner
+  Atler::AtlerRunResult runner = *origRunner;
+  //This error will disapear once CudaRunResult is implemented
+  Cuda::CudaRealMarking *newMarking = runner.parent;
 
-__global__ void runSimulationKernel(
-    Atler::SimpleTimedArcPetriNet* stapn,
-    Atler::SimpleRealMarking* initialMarking,
-    Atler::AST::SimpleSMCQuery* query,
-    SMCSettings settings,
-    int* successCount,
-    int runsNeeded
-) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= runsNeeded) return;
+  while (!runner.maximal && !(runner.totalTime >= tBound || runner.totalSteps >= sBound)) {
 
-    // Create local copy of run result
-    auto runner = Atler::AtlerRunResult(stapn);
-    runner.prepare(*initialMarking);
+    Cuda::CudaRealMarking child = *newMarking->clone();
+    Cuda::CudaQueryVisitor checker(child, *stapn);
+    Atler::AST::BoolResult result;
 
-    bool runRes = false;
-    Atler::SimpleRealMarking* newMarking = runner.parent;
+    query->accept(checker, result);
 
-    while (!runner.maximal && 
-           !(runner.totalTime >= settings.timeBound || 
-             runner.totalSteps >= settings.stepBound)) {
-        
-        Atler::SimpleRealMarking child = *newMarking->clone();
-        Atler::SimpleQueryVisitor checker(child, *stapn);
-        Atler::AST::BoolResult result;
-
-        query->accept(checker, result);
-        runRes = result.value;
-
-        if (runRes) {
-            atomicAdd(successCount, 1);
-            break;
-        }
-
-        newMarking = runner.next();
+    if (result.value) {
+      atomicAdd(successCount, 1);
+      break;
     }
-}
-}
+    //This error will disapear once CudaRunResult is implemented
+    newMarking = runner.next();
+  }
+
+} // namespace Cuda
+} // namespace VerifyTAPN::DiscreteVerification

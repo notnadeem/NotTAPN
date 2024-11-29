@@ -18,7 +18,7 @@ struct CudaInterval {
 
   __host__ __device__ static double boundDown() { return -HUGE_VAL; }
 
-  __host__ __device__ static double epsilon() { return __DBL_EPSILON__; }
+  __device__ static double epsilon() { return __DBL_EPSILON__; }
 
   __host__ __device__ CudaInterval() : low(0), high(0) {}
   __host__ __device__ CudaInterval(double l, double h) : low(l), high(h) {

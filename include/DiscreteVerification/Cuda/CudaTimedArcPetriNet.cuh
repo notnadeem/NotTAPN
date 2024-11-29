@@ -1,11 +1,12 @@
 #ifndef VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
 #define VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
 
-#include "DiscreteVerification/Atler/SimpleTimedInhibitorArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedInputArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedOutputArc.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedTransportArc.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedInhibitorArc.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedTransportArc.cuh"
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN {
@@ -14,15 +15,15 @@ namespace Cuda {
 struct CudaTimedArcPetriNet {
   Atler::SimpleTimedPlace *places;
   size_t placesLength;
-  Atler::SimpleTimedTransition **transitions;
+  CudaTimedTransition **transitions;
   size_t transitionsLength;
   Atler::SimpleTimedInputArc **inputArcs;
   size_t inputArcsLength;
   Atler::SimpleTimedOutputArc **outputArcs;
   size_t outputArcsLength;
-  Atler::SimpleTimedTransportArc **transportArcs;
+  CudaTimedTransportArc **transportArcs;
   size_t transportArcsLength;
-  Atler::SimpleTimedInhibitorArc **inhibitorArcs;
+  CudaTimedInhibitorArc **inhibitorArcs;
   size_t inhibitorArcsLength;
   int maxConstant;
   int gcd;

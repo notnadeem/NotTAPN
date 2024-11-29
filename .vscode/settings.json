@@ -90,6 +90,9 @@
     "barrier": "cpp",
     "charconv": "cpp",
     "latch": "cpp",
-    "syncstream": "cpp"
+    "syncstream": "cpp",
+    "dense_hash_map": "cpp",
+    "dense_hash_set": "cpp",
+    "sparse_hash_set": "cpp"
   }
 }

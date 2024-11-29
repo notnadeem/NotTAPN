@@ -16,22 +16,18 @@
 
 std::string printDoubleo(double value, unsigned int precision) {
   std::ostringstream oss;
-  if (precision == 0)
-    precision = std::numeric_limits<double>::max_digits10;
+  if (precision == 0) precision = std::numeric_limits<double>::max_digits10;
   oss << std::fixed << std::setprecision(precision) << value;
   return oss.str();
 }
 
 namespace VerifyTAPN::DiscreteVerification {
 
-AtlerProbabilityEstimation::AtlerProbabilityEstimation(
-    TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking,
-    AST::SMCQuery *query, VerificationOptions options)
-    : tapn(tapn), initialMarking(initialMarking), query(query),
-      options(options), numberOfRuns(0), maxTokensSeen(0),
+AtlerProbabilityEstimation::AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking,
+                                                       AST::SMCQuery *query, VerificationOptions options)
+    : tapn(tapn), initialMarking(initialMarking), query(query), options(options), numberOfRuns(0), maxTokensSeen(0),
       smcSettings(query->getSmcSettings()), validRuns(0), runsNeeded(0) {
-  computeChernoffHoeffdingBound(smcSettings.estimationIntervalWidth,
-                                smcSettings.confidence);
+  computeChernoffHoeffdingBound(smcSettings.estimationIntervalWidth, smcSettings.confidence);
 }
 
 bool AtlerProbabilityEstimation::run() {
@@ -42,12 +38,10 @@ bool AtlerProbabilityEstimation::run() {
 
   std::cout << "Converting Query..." << std::endl;
   SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
-  Atler::AST::SimpleSMCQuery *simpleSMCQuery =
-      Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
+  Atler::AST::SimpleSMCQuery *simpleSMCQuery = Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
 
   std::cout << "Converting Options..." << std::endl;
-  Atler::SimpleVerificationOptions simpleOptions =
-      Atler::SimpleOptionsConverter::convert(options);
+  Atler::SimpleVerificationOptions simpleOptions = Atler::SimpleOptionsConverter::convert(options);
 
   // TODO: Convert the PlaceVisitor to a simple representation
   // NOTE: Also find a way to simplify the representation of the PlaceVisitor
@@ -60,8 +54,7 @@ bool AtlerProbabilityEstimation::run() {
   std::cout << "Run prepare " << std::endl;
   runres.prepare(siMarking);
 
-  auto clones =
-      new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
+  auto clones = new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
   for (int i = 0; i < runsNeeded; i++) {
     clones->add(runres.copy());
   }
@@ -73,8 +66,8 @@ bool AtlerProbabilityEstimation::run() {
     // runner->reset();
     bool runRes = false;
     Atler::SimpleRealMarking *newMarking = runner->parent;
-    while (!runner->maximal && !(runner->totalTime >= smcSettings.timeBound ||
-                                 runner->totalSteps >= smcSettings.stepBound)) {
+    while (!runner->maximal &&
+           !(runner->totalTime >= smcSettings.timeBound || runner->totalSteps >= smcSettings.stepBound)) {
 
       // print value of maximal
       std::cout << "Max: " << runner->maximal << std::endl;
@@ -129,15 +122,104 @@ bool AtlerProbabilityEstimation::run() {
   return false;
 }
 
-bool AtlerProbabilityEstimation::parallel_run() { return false; }
+bool AtlerProbabilityEstimation::parallel_run() {
+  std::cout << "Converting TAPN and marking..." << std::endl;
+  auto result = Atler::SimpleTAPNConverter::convert(tapn, initialMarking);
+  Atler::SimpleTimedArcPetriNet stapn = result->first;
+  Atler::SimpleRealMarking siMarking = result->second;
+
+  std::cout << "Converting Query..." << std::endl;
+  SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
+  Atler::AST::SimpleSMCQuery *simpleSMCQuery = Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
+
+  std::cout << "Converting Options..." << std::endl;
+  Atler::SimpleVerificationOptions simpleOptions = Atler::SimpleOptionsConverter::convert(options);
+
+  // TODO: Convert the PlaceVisitor to a simple representation
+  // NOTE: Also find a way to simplify the representation of the PlaceVisitor
+
+  // Simulate prepare func
+  // setup the run generator
+
+  std::cout << "Creating run generator..." << std::endl;
+  auto runres = Atler::AtlerRunResult(stapn);
+  std::cout << "Run prepare " << std::endl;
+  runres.prepare(siMarking);
+
+  auto clones = new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
+  for (int i = 0; i < runsNeeded; i++) {
+    clones->add(runres.copy());
+  }
+
+  // Alloc memory here
+
+  int count = 0;
+  int success = 0;
+  for (int i = 0; i < runsNeeded; i++) {
+    Atler::AtlerRunResult *runner = clones->get(i);
+    // runner->reset();
+    bool runRes = false;
+    Atler::SimpleRealMarking *newMarking = runner->parent;
+    while (!runner->maximal &&
+           !(runner->totalTime >= smcSettings.timeBound || runner->totalSteps >= smcSettings.stepBound)) {
+
+      // print value of maximal
+      std::cout << "Max: " << runner->maximal << std::endl;
+
+      Atler::SimpleRealMarking child = *newMarking->clone();
+      Atler::SimpleQueryVisitor checker(child, stapn);
+      Atler::AST::BoolResult result;
+
+      simpleSMCQuery->accept(checker, result);
+      runRes = result.value;
+
+      if (runRes) {
+        std::cout << "Success" << runRes << std::endl;
+        success++;
+        break;
+      }
+
+      newMarking = runner->next();
+
+      std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
+      std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
+      std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
+      std::cout << "Total time: " << runner->totalTime << std::endl;
+      std::cout << "Total steps: " << runner->totalSteps << std::endl;
+      // std::cout << "After Max: " << runner->maximal << std::endl;
+    }
+    std::cout << "Number of runs: " << count << std::endl;
+    std::cout << "Success: " << success << std::endl;
+  }
+
+  // Create clones of the run generator
+
+  // print all the transition intervals
+  // for (size_t i = 0; i < runres.transitionIntervals.size; i++) {
+  //   std::cout << "Transition " << i << ": ";
+  //   for (size_t j = 0; j < runres.transitionIntervals.get(i).size; j++) {
+  //     std::cout << "(" << runres.transitionIntervals.get(i).get(j).lower()
+  //               << ", " << runres.transitionIntervals.get(i).get(j).upper()
+  //               << ") ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+
+  // End prepare
+  // std::cout << "Weight: " << stapn.places[0].inputArcs[0].weight <<
+  // std::endl; std::cout << "Number of places in simple tapn: " <<
+  // stapn.placesLength
+  //           << std::endl;
+  // std::cout << stapn.maxConstant << std::endl;
+  // std::cout << "Magic number: " << simpleSMCQuery->quantifier << std::endl;
+  // std::cout << "input length: " << simpleOptions.inputFile << std::endl;
+}
 
 // void AtlerProbabilityEstimation::prepare() { return; }
 // bool AtlerProbabilityEstimation::executeRun(SMCRunGenerator *generator) {
 // }
 
-unsigned int AtlerProbabilityEstimation::maxUsedTokens() {
-  return maxTokensSeen;
-}
+unsigned int AtlerProbabilityEstimation::maxUsedTokens() { return maxTokensSeen; }
 
 void AtlerProbabilityEstimation::setMaxTokensIfGreater(unsigned int i) {
   if (i > maxTokensSeen) {
@@ -146,9 +228,7 @@ void AtlerProbabilityEstimation::setMaxTokensIfGreater(unsigned int i) {
 }
 
 // NOTE: This should not be necessary in the new implementation
-bool AtlerProbabilityEstimation::mustDoAnotherRun() {
-  return numberOfRuns < runsNeeded;
-}
+bool AtlerProbabilityEstimation::mustDoAnotherRun() { return numberOfRuns < runsNeeded; }
 
 // bool AtlerProbabilityEstimation::handleSuccessor(
 //     Atler::SimpleRealMarking *marking) {
@@ -160,8 +240,7 @@ float AtlerProbabilityEstimation::getEstimation() {
   return (query->getQuantifier() == PG) ? 1 - proba : proba;
 }
 
-void AtlerProbabilityEstimation::computeChernoffHoeffdingBound(
-    const float intervalWidth, const float confidence) {
+void AtlerProbabilityEstimation::computeChernoffHoeffdingBound(const float intervalWidth, const float confidence) {
   // https://link.springer.com/content/pdf/10.1007/b94790.pdf p.78-79
   float bound = log(2.0 / (1 - confidence)) / (2.0 * pow(intervalWidth, 2));
   runsNeeded = (unsigned int)ceil(bound);
@@ -176,32 +255,26 @@ void AtlerProbabilityEstimation::printResult() {
   float result = getEstimation();
   float width = smcSettings.estimationIntervalWidth;
   std::cout << "Probability estimation:" << std::endl;
-  std::cout << "\tConfidence: " << smcSettings.confidence * 100 << "%"
-            << std::endl;
+  std::cout << "\tConfidence: " << smcSettings.confidence * 100 << "%" << std::endl;
   std::cout << "\tP = " << result << " ± " << width << std::endl;
 }
 
 void AtlerProbabilityEstimation::printStats() {
   std::cout << "  runs executed:\t" << numberOfRuns << std::endl;
-  std::cout << "  average run length:\t" << (totalSteps / (double)numberOfRuns)
-            << std::endl;
-  std::cout << "  average run duration:\t" << (totalTime / (double)numberOfRuns)
-            << std::endl;
-  std::cout << "  verification time:\t" << ((double)durationNs / 1.0E9) << "s"
-            << std::endl;
+  std::cout << "  average run length:\t" << (totalSteps / (double)numberOfRuns) << std::endl;
+  std::cout << "  average run duration:\t" << (totalTime / (double)numberOfRuns) << std::endl;
+  std::cout << "  verification time:\t" << ((double)durationNs / 1.0E9) << "s" << std::endl;
   printGlobalRunsStats();
   printValidRunsStats();
   printViolatingRunsStats();
-  if (options.mustPrintCumulative())
-    printCumulativeStats();
+  if (options.mustPrintCumulative()) printCumulativeStats();
 }
 
 void AtlerProbabilityEstimation::printTransitionStatistics() const {
   // runGenerator.printTransitionStatistics(std::cout);
 }
 
-void AtlerProbabilityEstimation::printHumanTrace(
-    std::stack<RealMarking *> &stack, const std::string &name) {
+void AtlerProbabilityEstimation::printHumanTrace(std::stack<RealMarking *> &stack, const std::string &name) {
   bool isFirst = true;
   std::cout << "Name: " << name << std::endl;
   while (!stack.empty()) {
@@ -213,8 +286,7 @@ void AtlerProbabilityEstimation::printHumanTrace(
         std::cout << "\tDelay: " << marking->getPreviousDelay() << std::endl;
       }
       if (marking->getGeneratedBy() != nullptr) {
-        std::cout << "\tTransition:" << marking->getGeneratedBy()->getName()
-                  << std::endl;
+        std::cout << "\tTransition:" << marking->getGeneratedBy()->getName() << std::endl;
       }
       if (marking->canDeadlock(tapn, 0)) {
         std::cout << "\tDeadlock: " << std::endl;
@@ -224,8 +296,7 @@ void AtlerProbabilityEstimation::printHumanTrace(
     for (auto &token_list : stack.top()->getPlaceList()) {
       for (auto &token : token_list.tokens) {
         for (int i = 0; i < token.getCount(); i++) {
-          std::cout << "(" << token_list.place->getName() << ","
-                    << token.getAge() << ") ";
+          std::cout << "(" << token_list.place->getName() << "," << token.getAge() << ") ";
         }
       }
     }
@@ -233,15 +304,13 @@ void AtlerProbabilityEstimation::printHumanTrace(
   }
 }
 
-void AtlerProbabilityEstimation::printXMLTrace(
-    std::stack<RealMarking *> &stack, const std::string &name,
-    rapidxml::xml_document<> &doc, rapidxml::xml_node<> *list_node) {
+void AtlerProbabilityEstimation::printXMLTrace(std::stack<RealMarking *> &stack, const std::string &name,
+                                               rapidxml::xml_document<> &doc, rapidxml::xml_node<> *list_node) {
   using namespace rapidxml;
   bool isFirst = true;
   RealMarking *old = nullptr;
   xml_node<> *root = doc.allocate_node(node_element, "trace");
-  xml_attribute<> *name_attr =
-      doc.allocate_attribute("name", doc.allocate_string(name.c_str()));
+  xml_attribute<> *name_attr = doc.allocate_attribute("name", doc.allocate_string(name.c_str()));
   root->append_attribute(name_attr);
   list_node->append_node(root);
   while (!stack.empty()) {
@@ -250,10 +319,8 @@ void AtlerProbabilityEstimation::printXMLTrace(
     } else {
       RealMarking *marking = stack.top();
       if (marking->getPreviousDelay() > 0) {
-        std::string str = printDoubleo(marking->getPreviousDelay(),
-                                       options.getSMCNumericPrecision());
-        xml_node<> *node = doc.allocate_node(node_element, "delay",
-                                             doc.allocate_string(str.c_str()));
+        std::string str = printDoubleo(marking->getPreviousDelay(), options.getSMCNumericPrecision());
+        xml_node<> *node = doc.allocate_node(node_element, "delay", doc.allocate_string(str.c_str()));
         root->append_node(node);
       }
       if (marking->getGeneratedBy() != nullptr) {
@@ -271,22 +338,20 @@ void AtlerProbabilityEstimation::printXMLTrace(
 void AtlerProbabilityEstimation::printValidRunsStats() {
   std::string category = "valid";
   if (query->getQuantifier() == PF) {
-    printRunsStats(category, validRuns, validRunsSteps, validRunsTime,
-                   validPerStep, validPerDelay);
+    printRunsStats(category, validRuns, validRunsSteps, validRunsTime, validPerStep, validPerDelay);
   } else {
-    printRunsStats(category, numberOfRuns - validRuns, violatingRunSteps,
-                   violatingRunTime, violatingPerStep, violatingPerDelay);
+    printRunsStats(category, numberOfRuns - validRuns, violatingRunSteps, violatingRunTime, violatingPerStep,
+                   violatingPerDelay);
   }
 }
 
 void AtlerProbabilityEstimation::printViolatingRunsStats() {
   std::string category = "violating";
   if (query->getQuantifier() == PG) {
-    printRunsStats(category, validRuns, validRunsSteps, validRunsTime,
-                   validPerStep, validPerDelay);
+    printRunsStats(category, validRuns, validRunsSteps, validRunsTime, validPerStep, validPerDelay);
   } else {
-    printRunsStats(category, numberOfRuns - validRuns, violatingRunSteps,
-                   violatingRunTime, violatingPerStep, violatingPerDelay);
+    printRunsStats(category, numberOfRuns - validRuns, violatingRunSteps, violatingRunTime, violatingPerStep,
+                   violatingPerDelay);
   }
 }
 
@@ -349,8 +414,7 @@ void AtlerProbabilityEstimation::printCumulativeStats() {
   std::cout << "  cumulative probability / delay :" << std::endl;
   acc = initial;
   binSize = timeScale == 0 ? 1 : (maxValidDuration / (double)timeScale);
-  std::vector<double> bins(
-      binSize > 0 ? (size_t)round(maxValidDuration / binSize) : 1, 0.0f);
+  std::vector<double> bins(binSize > 0 ? (size_t)round(maxValidDuration / binSize) : 1, 0.0f);
   lastAcc = acc;
   for (int i = 0; i < validPerDelay.size(); i++) {
     double delay = validPerDelay[i];
@@ -375,13 +439,11 @@ void AtlerProbabilityEstimation::printCumulativeStats() {
   std::cout << std::endl;
 }
 
-void AtlerProbabilityEstimation::printRunsStats(
-    const std::string category, unsigned long n, unsigned long totalSteps,
-    double totalDelay, std::vector<int> perStep, std::vector<float> perDelay) {
+void AtlerProbabilityEstimation::printRunsStats(const std::string category, unsigned long n, unsigned long totalSteps,
+                                                double totalDelay, std::vector<int> perStep,
+                                                std::vector<float> perDelay) {
   if (n == 0) {
-    std::cout << "  no " + category +
-                     " runs, unable to compute specific statistics"
-              << std::endl;
+    std::cout << "  no " + category + " runs, unable to compute specific statistics" << std::endl;
     return;
   }
   double stepsMean = (totalSteps / (double)n);
@@ -398,45 +460,38 @@ void AtlerProbabilityEstimation::printRunsStats(
   double delayStdDev = sqrt(delayAcc / n);
   std::cout << "  statistics of " + category + " runs:" << std::endl;
   std::cout << "    number of " << category << " runs: " << n << std::endl;
-  std::cout << "    duration of a " + category + " run (average):\t" << timeMean
-            << std::endl;
-  std::cout << "    duration of a " + category + " run (std. dev.):\t"
-            << delayStdDev << std::endl;
-  std::cout << "    length of a " + category + " run (average):\t" << stepsMean
-            << std::endl;
-  std::cout << "    length of a " + category + " run (std. dev.):\t"
-            << stepsStdDev << std::endl;
+  std::cout << "    duration of a " + category + " run (average):\t" << timeMean << std::endl;
+  std::cout << "    duration of a " + category + " run (std. dev.):\t" << delayStdDev << std::endl;
+  std::cout << "    length of a " + category + " run (average):\t" << stepsMean << std::endl;
+  std::cout << "    length of a " + category + " run (std. dev.):\t" << stepsStdDev << std::endl;
 }
 
 // XML node creation methods
 
-rapidxml::xml_node<> *AtlerProbabilityEstimation::createTransitionNode(
-    RealMarking *old, RealMarking *current, rapidxml::xml_document<> &doc) {
+rapidxml::xml_node<> *AtlerProbabilityEstimation::createTransitionNode(RealMarking *old, RealMarking *current,
+                                                                       rapidxml::xml_document<> &doc) {
   using namespace rapidxml;
   xml_node<> *transitionNode = doc.allocate_node(node_element, "transition");
-  xml_attribute<> *id =
-      doc.allocate_attribute("id", current->getGeneratedBy()->getId().c_str());
+  xml_attribute<> *id = doc.allocate_attribute("id", current->getGeneratedBy()->getId().c_str());
   transitionNode->append_attribute(id);
 
   for (auto *arc : current->getGeneratedBy()->getPreset()) {
-    createTransitionSubNodes(old, current, doc, transitionNode,
-                             arc->getInputPlace(), arc->getInterval(),
+    createTransitionSubNodes(old, current, doc, transitionNode, arc->getInputPlace(), arc->getInterval(),
                              arc->getWeight());
   }
 
   for (auto *arc : current->getGeneratedBy()->getTransportArcs()) {
-    createTransitionSubNodes(old, current, doc, transitionNode,
-                             arc->getSource(), arc->getInterval(),
-                             arc->getWeight());
+    createTransitionSubNodes(old, current, doc, transitionNode, arc->getSource(), arc->getInterval(), arc->getWeight());
   }
 
   return transitionNode;
 }
 
-void AtlerProbabilityEstimation::createTransitionSubNodes(
-    RealMarking *old, RealMarking *current, rapidxml::xml_document<> &doc,
-    rapidxml::xml_node<> *transitionNode, const TAPN::TimedPlace &place,
-    const TAPN::TimeInterval &interval, int weight) {
+void AtlerProbabilityEstimation::createTransitionSubNodes(RealMarking *old, RealMarking *current,
+                                                          rapidxml::xml_document<> &doc,
+                                                          rapidxml::xml_node<> *transitionNode,
+                                                          const TAPN::TimedPlace &place,
+                                                          const TAPN::TimeInterval &interval, int weight) {
   RealTokenList current_tokens = current->getTokenList(place.getIndex());
   RealTokenList old_tokens = old->getTokenList(place.getIndex());
   int tokensFound = 0;
@@ -460,16 +515,14 @@ void AtlerProbabilityEstimation::createTransitionSubNodes(
       }
     }
   }
-  for (RealTokenList::const_iterator iter = n_iter;
-       iter != current_tokens.end(); iter++) {
+  for (RealTokenList::const_iterator iter = n_iter; iter != current_tokens.end(); iter++) {
     for (int i = 0; i < iter->getCount(); i++) {
       transitionNode->append_node(createTokenNode(doc, place, *iter));
       tokensFound++;
     }
   }
   for (auto &token : old_tokens) {
-    if (tokensFound >= weight)
-      break;
+    if (tokensFound >= weight) break;
     if (token.getAge() >= interval.getLowerBound()) {
       for (int i = 0; i < token.getCount() && tokensFound < weight; i++) {
         transitionNode->append_node(createTokenNode(doc, place, token));
@@ -479,18 +532,15 @@ void AtlerProbabilityEstimation::createTransitionSubNodes(
   }
 }
 
-rapidxml::xml_node<> *
-AtlerProbabilityEstimation::createTokenNode(rapidxml::xml_document<> &doc,
-                                            const TAPN::TimedPlace &place,
-                                            const RealToken &token) {
+rapidxml::xml_node<> *AtlerProbabilityEstimation::createTokenNode(rapidxml::xml_document<> &doc,
+                                                                  const TAPN::TimedPlace &place,
+                                                                  const RealToken &token) {
   using namespace rapidxml;
   xml_node<> *tokenNode = doc.allocate_node(node_element, "token");
-  xml_attribute<> *placeAttribute = doc.allocate_attribute(
-      "place", doc.allocate_string(place.getName().c_str()));
+  xml_attribute<> *placeAttribute = doc.allocate_attribute("place", doc.allocate_string(place.getName().c_str()));
   tokenNode->append_attribute(placeAttribute);
   auto str = printDoubleo(token.getAge(), options.getSMCNumericPrecision());
-  xml_attribute<> *ageAttribute =
-      doc.allocate_attribute("age", doc.allocate_string(str.c_str()));
+  xml_attribute<> *ageAttribute = doc.allocate_attribute("age", doc.allocate_string(str.c_str()));
   tokenNode->append_attribute(ageAttribute);
   return tokenNode;
 }
