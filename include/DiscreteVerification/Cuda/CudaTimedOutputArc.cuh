@@ -4,6 +4,7 @@
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 
+#include <cuda_runtime.h>
 #include <cstdint>
 
 namespace VerifyTAPN {

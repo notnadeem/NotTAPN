@@ -11,8 +11,7 @@
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
-#include <cstddef>
-#include <cstdint>
+
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
