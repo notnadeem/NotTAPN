@@ -2,18 +2,16 @@
 #define VERIFYYAPN_ATLER_CUDATIMEDINHIBITORARC_CUH_
 
 #include "Core/TAPN/InhibitorArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN {
 namespace Cuda {
 
-struct CudaTimedTransition;
-struct SimpleTimedPlace;
 
 struct CudaTimedInhibitorArc {
-  SimpleTimedPlace &inputPlace;
+  CudaTimedPlace &inputPlace;
   CudaTimedTransition &outputTransition;
   uint32_t weight;
 

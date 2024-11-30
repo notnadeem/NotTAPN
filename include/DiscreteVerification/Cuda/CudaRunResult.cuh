@@ -2,8 +2,8 @@
 #define VERIFYTAPN_CUDA_RUNGEN_CHU_
 
 #include "DiscreteVerification/Atler/SimpleStochasticStructure.hpp" //TODO: Use the Cuda one when you fetch the new structure
-#include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedOutputArc.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaDeque.cuh"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Cuda/CudaInterval.cuh"
@@ -495,17 +495,17 @@ struct CudaRunResult {
     CudaRealPlace *placeList = child->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
-      Atler::SimpleTimedInputArc *input = transition->preset[i];
+      CudaTimedInputArc *input = transition->preset[i];
       CudaRealPlace place = placeList[transition->preset[i]->inputPlace.index];
       CudaDynamicArray<CudaRealToken *> &tokenList = place.tokens;
       switch (transition->_firingMode) {
-      case SimpleSMC::FiringMode::Random:
+      case Atler::SimpleSMC::FiringMode::Random:
         removeRandom(tokenList, input->interval, input->weight);
         break;
-      case SimpleSMC::FiringMode::Oldest:
+      case Atler::SimpleSMC::FiringMode::Oldest:
         removeOldest(tokenList, input->interval, input->weight);
         break;
-      case SimpleSMC::FiringMode::Youngest:
+      case Atler::SimpleSMC::FiringMode::Youngest:
         removeYoungest(tokenList, input->interval, input->weight);
         break;
       default:
@@ -513,7 +513,7 @@ struct CudaRunResult {
         break;
       }
 
-      auto toCreate = CudaDynamicArray<std::pair<Atler::SimpleTimedPlace *, CudaRealToken *>>(10);
+      auto toCreate = CudaDynamicArray<std::pair<CudaTimedPlace *, CudaRealToken *>>(10);
       for (size_t i = 0; i < transition->transportArcsLength; i++) {
         auto transport = transition->transportArcs[i];
         int destInv = transport->destination.timeInvariant.bound;
@@ -523,13 +523,13 @@ struct CudaRunResult {
         CudaTimeInterval &arcInterval = transport->interval;
         if (destInv < arcInterval.upperBound) arcInterval.setUpperBound(destInv, false);
         switch (transition->_firingMode) {
-        case SimpleSMC::FiringMode::Random:
+        case Atler::SimpleSMC::FiringMode::Random:
           consumed = removeRandom(tokenList, arcInterval, transport->weight);
           break;
-        case SimpleSMC::FiringMode::Oldest:
+        case Atler::SimpleSMC::FiringMode::Oldest:
           consumed = removeOldest(tokenList, arcInterval, transport->weight);
           break;
-        case SimpleSMC::FiringMode::Youngest:
+        case Atler::SimpleSMC::FiringMode::Youngest:
           consumed = removeYoungest(tokenList, arcInterval, transport->weight);
           break;
         default:
@@ -542,8 +542,8 @@ struct CudaRunResult {
       }
 
       for (size_t i = 0; i < transition->postsetLength; i++) {
-        Atler::SimpleTimedPlace &place = transition->postset[i]->outputPlace;
-        Atler::SimpleTimedOutputArc *post = transition->postset[i];
+        CudaTimedPlace &place = transition->postset[i]->outputPlace;
+        CudaTimedOutputArc *post = transition->postset[i];
         auto token = CudaRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
         child->addTokenInPlace(place, token);
       }

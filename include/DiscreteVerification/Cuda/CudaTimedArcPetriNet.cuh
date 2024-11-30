@@ -1,9 +1,9 @@
 #ifndef VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
 #define VERIFYYAPN_ATLER_CUDATIMEDARCPETRINET_CUH_
 
-#include "DiscreteVerification/Atler/SimpleTimedInputArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedOutputArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedInputArc.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedInhibitorArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransportArc.cuh"
@@ -13,13 +13,13 @@ namespace VerifyTAPN {
 namespace Cuda {
 
 struct CudaTimedArcPetriNet {
-  Atler::SimpleTimedPlace *places;
+  CudaTimedPlace *places;
   size_t placesLength;
   CudaTimedTransition **transitions;
   size_t transitionsLength;
-  Atler::SimpleTimedInputArc **inputArcs;
+  CudaTimedInputArc **inputArcs;
   size_t inputArcsLength;
-  Atler::SimpleTimedOutputArc **outputArcs;
+  CudaTimedOutputArc **outputArcs;
   size_t outputArcsLength;
   CudaTimedTransportArc **transportArcs;
   size_t transportArcsLength;

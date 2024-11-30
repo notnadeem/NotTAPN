@@ -1,7 +1,7 @@
 #ifndef VERIFYTAPN_ATLER_CUDAREALMARKING_CUH_
 #define VERIFYTAPN_ATLER_CUDAREALMARKING_CUH_
 
-#include "DiscreteVerification/Atler/SimpleTimedPlace.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 
@@ -20,12 +20,12 @@ struct CudaRealToken {
 };
 
 struct CudaRealPlace {
-  Atler::SimpleTimedPlace place;
+  CudaTimedPlace place;
   CudaDynamicArray<CudaRealToken *> tokens;
 
   __host__ __device__ CudaRealPlace() { tokens = CudaDynamicArray<CudaRealToken *>(); }
 
-  __host__ __device__ CudaRealPlace(Atler::SimpleTimedPlace place, size_t tokensLength) : place(place) {
+  __host__ __device__ CudaRealPlace(CudaTimedPlace place, size_t tokensLength) : place(place) {
     tokens = CudaDynamicArray<CudaRealToken *>(tokensLength);
   }
 
@@ -135,7 +135,7 @@ struct CudaRealMarking {
 
   __host__ __device__ uint32_t numberOfTokensInPlace(int placeId) const { return places[placeId].totalTokenCount(); }
 
-  __host__ __device__ void addTokenInPlace(Atler::SimpleTimedPlace &place, CudaRealToken &newToken) {
+  __host__ __device__ void addTokenInPlace(CudaTimedPlace &place, CudaRealToken &newToken) {
     places[place.index].addToken(newToken);
   }
 

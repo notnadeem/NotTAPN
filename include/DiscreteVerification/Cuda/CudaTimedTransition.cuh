@@ -2,9 +2,9 @@
 #define VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_
 
 #include "DiscreteVerification/Atler/SimpleStochasticStructure.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedInhibitorArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedInputArc.hpp"
-#include "DiscreteVerification/Atler/SimpleTimedOutputArc.hpp"
+#include "DiscreteVerification/Cuda/CudaTimedInhibitorArc.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedInputArc.cuh"
+#include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransportArc.cuh"
 
 #include <cuda_runtime.h>
@@ -18,13 +18,13 @@ struct CudaTimedTransition {
   char* name;
   char* id;
 
-  Atler::SimpleTimedInputArc** preset = nullptr;
+  CudaTimedInputArc** preset = nullptr;
   int presetLength = 0;
-  Atler::SimpleTimedOutputArc** postset = nullptr;
+  CudaTimedOutputArc** postset = nullptr;
   int postsetLength = 0;
   CudaTimedTransportArc** transportArcs = nullptr;
   int transportArcsLength = 0;
-  Atler::SimpleTimedInhibitorArc** inhibitorArcs = nullptr;
+  CudaTimedInhibitorArc** inhibitorArcs = nullptr;
   int inhibitorArcsLength = 0;
 
   bool untimedPostset = false;
