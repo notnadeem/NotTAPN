@@ -12,8 +12,8 @@ namespace VerifyTAPN {
 namespace Cuda {
 struct CudaTimedTransition {
   int index = 0;
-  char* name;
-  char* id;
+  const char* name;
+  const char* id;
 
   CudaTimedInputArc** preset = nullptr;
   int presetLength = 0;

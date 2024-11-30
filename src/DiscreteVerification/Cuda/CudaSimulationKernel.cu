@@ -1,4 +1,4 @@
-#include "DiscreteVerification/Atler/AtlerRunResult.hpp"
+#include "DiscreteVerification/Cuda/CudaRunResult.cuh"
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Atler/SimpleInterval.hpp"
@@ -16,9 +16,9 @@
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
-__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *stapn, Cuda::CudaRealMarking *initialMarking,
+__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
                                     Cuda::AST::CudaSMCQuery *query,
-                                    Cuda::CudaDynamicArray<Atler::AtlerRunResult *> *clones, int *timeBound,
+                                    Cuda::CudaRunResult *origRunner, int *timeBound,
                                     int *stepBound, int *successCount, int *runsNeeded) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
@@ -26,16 +26,15 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *stapn, Cuda::Cud
   int sBound = *stepBound;
   if (tid >= runNeed) return;
   // TODO Change to cudarunsresult
-  Atler::AtlerRunResult *origRunner = clones->get(tid);
   // Create local copy of the runner
-  Atler::AtlerRunResult runner = *origRunner;
+  Cuda::CudaRunResult runner = *origRunner;
   //This error will disapear once CudaRunResult is implemented
   Cuda::CudaRealMarking *newMarking = runner.parent;
 
   while (!runner.maximal && !(runner.totalTime >= tBound || runner.totalSteps >= sBound)) {
 
     Cuda::CudaRealMarking child = *newMarking->clone();
-    Cuda::CudaQueryVisitor checker(child, *stapn);
+    Cuda::CudaQueryVisitor checker(child, *ctapn);
     Atler::AST::BoolResult result;
 
     query->accept(checker, result);
@@ -45,7 +44,7 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *stapn, Cuda::Cud
       break;
     }
     //This error will disapear once CudaRunResult is implemented
-    newMarking = runner.next();
+    newMarking = runner.next(tid);
   }
 
 } // namespace Cuda
