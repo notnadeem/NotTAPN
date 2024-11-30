@@ -134,7 +134,7 @@ namespace VerifyTAPN::Cuda::SimpleSMC
     }
 
         // Helper function implementation
-    __device__ double gamrnd_d(double shape, double scale, curandState_t *state)
+    __device__ double gamrnd_d(double shape, double scale, curandState_t *state) const
     {
         if (shape >= 1)
         {
