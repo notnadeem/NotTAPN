@@ -54,19 +54,19 @@ struct CudaInterval {
 
   __host__ __device__ CudaInterval positive() {
     if (empty() || high < 0) return CudaInterval((double)1, 0);
-    return CudaInterval(max(low, (double)0), high);
+    return CudaInterval(fmax(low, (double)0), high);
   }
 };
 
 __host__ __device__ CudaInterval intersect(const CudaInterval &l, const CudaInterval r) {
   if (l.empty()) return l;
   if (r.empty()) return r;
-  CudaInterval n(max(l.low, r.low), min(l.high, r.high));
+  CudaInterval n(fmax(l.low, r.low), fmin(l.high, r.high));
   return n;
 }
 
 __host__ __device__ CudaInterval hull(const CudaInterval &l, const CudaInterval r) {
-  return CudaInterval(min(l.low, r.low), max(l.high, r.high));
+  return CudaInterval(fmin(l.low, r.low), fmax(l.high, r.high));
 }
 
 __host__ __device__ bool overlap(const CudaInterval &l, const CudaInterval r) {

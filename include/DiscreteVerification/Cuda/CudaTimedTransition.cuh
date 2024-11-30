@@ -1,7 +1,7 @@
 #ifndef VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_
 #define VERIFYTAPN_ATLER_CUDATIMEDTRANSITION_CUH_
 
-#include "DiscreteVerification/Atler/SimpleStochasticStructure.hpp"
+#include "DiscreteVerification/Cuda/CudaStochasticStructure.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedInhibitorArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedInputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
@@ -31,9 +31,9 @@ struct CudaTimedTransition {
   bool urgent = false;
   bool controllable{};
   std::pair<double, double> _position;
-  Atler::SimpleSMC::Distribution _distribution;
+  CudaSMC::Distribution distribution;
   double _weight;
-  Atler::SimpleSMC::FiringMode _firingMode = Atler::SimpleSMC::Oldest;
+  CudaSMC::FiringMode _firingMode = CudaSMC::Oldest;
 
   __host__ __device__ inline int getPresetSize() const {
       return presetLength + transportArcsLength;
