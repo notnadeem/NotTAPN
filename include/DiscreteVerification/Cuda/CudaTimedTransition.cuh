@@ -6,15 +6,12 @@
 #include "DiscreteVerification/Cuda/CudaTimedInputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransportArc.cuh"
-
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN {
 namespace Cuda {
 struct CudaTimedTransition {
   int index = 0;
-
-  //Not sure about this
   char* name;
   char* id;
 

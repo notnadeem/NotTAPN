@@ -7,22 +7,21 @@
 #include "SimpleTimedOutputArc.hpp"
 #include "SimpleTimedTransportArc.hpp"
 #include <cstddef>
-#include <string>
 
 namespace VerifyTAPN {
 namespace Atler {
 struct SimpleTimedTransition {
   int index = 0;
-  const char* name;
-  const char* id;
+  const char *name;
+  const char *id;
 
-  SimpleTimedInputArc** preset = nullptr;
+  SimpleTimedInputArc **preset = nullptr;
   size_t presetLength = 0;
-  SimpleTimedOutputArc** postset = nullptr;
+  SimpleTimedOutputArc **postset = nullptr;
   size_t postsetLength = 0;
-  SimpleTimedTransportArc** transportArcs = nullptr;
+  SimpleTimedTransportArc **transportArcs = nullptr;
   size_t transportArcsLength = 0;
-  SimpleTimedInhibitorArc** inhibitorArcs = nullptr;
+  SimpleTimedInhibitorArc **inhibitorArcs = nullptr;
   size_t inhibitorArcsLength = 0;
 
   bool untimedPostset = false;
@@ -33,9 +32,7 @@ struct SimpleTimedTransition {
   double _weight;
   SimpleSMC::FiringMode _firingMode = SimpleSMC::Oldest;
 
-  inline int getPresetSize() const {
-      return presetLength + transportArcsLength;
-  }
+  inline int getPresetSize() const { return presetLength + transportArcsLength; }
 };
 } // namespace Atler
 } // namespace VerifyTAPN

@@ -1,11 +1,11 @@
 #ifndef VERIFYTAPN_CUDA_RUNGEN_CHU_
 #define VERIFYTAPN_CUDA_RUNGEN_CHU_
 
-#include "DiscreteVerification/Cuda/CudaStochasticStructure.cuh"
 #include "DiscreteVerification/Cuda/CudaDeque.cuh"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Cuda/CudaInterval.cuh"
 #include "DiscreteVerification/Cuda/CudaRealMarking.cuh"
+#include "DiscreteVerification/Cuda/CudaStochasticStructure.cuh"
 #include "DiscreteVerification/Cuda/CudaTimeInterval.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedArcPetriNet.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
@@ -49,28 +49,26 @@ struct CudaRunResult {
     CudaSMC::setup<<<blocks, threadsPerBlock>>>(rngStates);
   }
 
-  //Change this to cuda if needed
-  // CudaRunResult(const CudaRunResult &other)
-  //     : tapn(other.tapn), defaultTransitionIntervals(other.defaultTransitionIntervals),
-  //       transitionIntervals(other.transitionIntervals), numericPrecision(other.numericPrecision), rng(other.rng),
-  //       maximal(other.maximal) {
-  //   if (other.parent != nullptr) {
-  //     // Deep clone parent
-  //     parent = other.parent->clone();
-  //   } else {
-  //     parent = nullptr;
-  //   }
-  //   if (other.origin != nullptr) {
-  //     // Deep clone origin
-  //     origin = other.origin->clone();
-  //   } else {
-  //     origin = nullptr;
-  //   }
-  // }
+  // Change this to cuda if needed
+  //  CudaRunResult(const CudaRunResult &other)
+  //      : tapn(other.tapn), defaultTransitionIntervals(other.defaultTransitionIntervals),
+  //        transitionIntervals(other.transitionIntervals), numericPrecision(other.numericPrecision), rng(other.rng),
+  //        maximal(other.maximal) {
+  //    if (other.parent != nullptr) {
+  //      // Deep clone parent
+  //      parent = other.parent->clone();
+  //    } else {
+  //      parent = nullptr;
+  //    }
+  //    if (other.origin != nullptr) {
+  //      // Deep clone origin
+  //      origin = other.origin->clone();
+  //    } else {
+  //      origin = nullptr;
+  //    }
+  //  }
 
-    __host__ ~CudaRunResult() {
-        cudaFree(rngStates);
-    }
+  __host__ ~CudaRunResult() { cudaFree(rngStates); }
 
   __host__ __device__ CudaRunResult *copy(int tid) const {
     CudaRunResult *clone = new CudaRunResult(tapn, numThreads, threadsPerBlock);
@@ -82,8 +80,8 @@ struct CudaRunResult {
   }
 
   __host__ __device__ void prepare(CudaRealMarking initMarking, int tid) {
-    origin = initMarking.clone();
-    parent = initMarking.clone();
+    origin = new CudaRealMarking(initMarking);
+    parent = new CudaRealMarking(initMarking);
     printf("Prepared\n");
     double originMaxDelay = origin->availableDelay();
     CudaDynamicArray<Util::CudaInterval> *invIntervals =
@@ -102,6 +100,9 @@ struct CudaRunResult {
       } else {
         printf("Intersecting transition no inside: %d\n", i);
         CudaDynamicArray<Util::CudaInterval> firingDates = transitionFiringDates(*transition);
+        for (size_t i = 0; i < firingDates.size; i++) {
+          printf("Firing date: %d, %d \n", firingDates.get(i).lower(), firingDates.get(i).upper());
+        }
         defaultTransitionIntervals.add(Util::setIntersection(firingDates, *invIntervals));
         printf("End of Intersection\n");
       }
@@ -161,7 +162,7 @@ struct CudaRunResult {
       auto transition = tapn.transitions[i];
       int index = transition->index;
       if (transition->getPresetSize() == 0 && transition->inhibitorArcsLength == 0) {
-        transitionIntervals.set(i, invIntervals);
+        transitionIntervals.set(index, invIntervals);
       } else {
         CudaDynamicArray<Util::CudaInterval> firingDates = transitionFiringDates(*transition);
         transitionIntervals.set(i, Util::setIntersection(firingDates, invIntervals));
@@ -170,12 +171,15 @@ struct CudaRunResult {
       bool enabled = (!transitionIntervals.get(i).empty()) && (transitionIntervals.get(i).get(0).lower() == 0);
       bool newlyEnabled = enabled && (dates_sampled->get(i) == HUGE_VAL);
       bool reachedUpper =
-          enabled && !newlyEnabled && (transitionIntervals.get(i).get(0).upper() == 0 && dates_sampled->get(i) > 0);
+          enabled && !newlyEnabled && (transitionIntervals.get(i).get(0).upper() == 0) && (dates_sampled->get(i) > 0);
       if (!enabled || reachedUpper) {
         dates_sampled->set(i, HUGE_VAL);
       } else if (newlyEnabled) {
         const auto distribution = tapn.transitions[i]->distribution;
         double date = distribution.sample(&rngStates[tid], numericPrecision);
+        // printf("Transition intervals inter size: %d\n", transitionIntervals.get(i).size);
+        printf("Transition intervals get i 0.lower(): %d\n", transitionIntervals.get(i).get(0).lower());
+        printf("Transition intervals get i 0.upper(): %d\n", transitionIntervals.get(i).get(0).upper());
         if (transitionIntervals.get(i).get(0).upper() > 0 || date == 0) {
           dates_sampled->set(i, date);
         }
@@ -192,6 +196,7 @@ struct CudaRunResult {
 
     if (delay == HUGE_VAL) {
       // print delay is infinity
+      printf("Delay is infinity/Deadlocked\n");
       maximal = true;
       return nullptr;
     }
@@ -213,8 +218,13 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transitionIntervals.size; i++) {
       double date = dates_sampled->get(i);
-      double newVal =
-          (date == HUGE_VAL) ? HUGE_VAL : date - delay;
+      double newVal = (date == HUGE_VAL) ? HUGE_VAL : date - delay;
+
+      if (date != HUGE_VAL) {
+        printf("Date: %d\n", date);
+        printf("newVal: %d\n", newVal);
+      }
+      dates_sampled->set(i, newVal);
     }
 
     refreshTransitionsIntervals(tid);
@@ -252,6 +262,7 @@ struct CudaRunResult {
       printf("Dates sampled length: %d\n", dates_sampled->size);
       date = fmin(dates_sampled->get(i), date);
       if (date < date_min) {
+        printf("New minimum date: %f\n", date);
         date_min = date;
         winner_indexes.clear();
       }
@@ -271,7 +282,8 @@ struct CudaRunResult {
     return std::make_pair(winner, date_min);
   }
 
-  __host__ __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes, int tid) {
+  __host__ __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
+                                                                int tid) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
@@ -305,7 +317,8 @@ struct CudaRunResult {
     return tapn.transitions[winner_indexes.get(0)];
   }
 
-  __host__ __device__ CudaDynamicArray<Util::CudaInterval> transitionFiringDates(const CudaTimedTransition &transition) {
+  __host__ __device__ CudaDynamicArray<Util::CudaInterval>
+  transitionFiringDates(const CudaTimedTransition &transition) {
     auto firingIntervals = CudaDynamicArray<Util::CudaInterval>(10);
     firingIntervals.add(Util::CudaInterval(0, HUGE_VAL));
     auto disabled = CudaDynamicArray<Util::CudaInterval>();
@@ -324,18 +337,18 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      auto place = parent->places[arc->inputPlace.index];
+      CudaRealPlace place = parent->places[arc->inputPlace.index];
 
       printf("Preset arc\n");
       printf("place name: %s\n", place.place.name);
-      printf("place size: %d\n", place.tokens.size);
-      printf("place capacity: %d\n", place.tokens.capacity);
+      printf("place size: %d\n", place.tokens->size);
+      printf("place capacity: %d\n", place.tokens->capacity);
       if (place.isEmpty()) {
         return disabled;
       }
       printf("Preset arc 2\n");
       firingIntervals =
-          Util::setIntersection(firingIntervals, arcFiringDates(arc->interval, arc->weight, place.tokens));
+          Util::setIntersection(firingIntervals, arcFiringDates(arc->interval, arc->weight, *place.tokens));
       if (firingIntervals.empty()) return firingIntervals;
     }
 
@@ -351,7 +364,7 @@ struct CudaRunResult {
         arcInterval.setUpperBound(targetInvariant.bound, targetInvariant.isBoundStrict);
       }
       firingIntervals =
-          Util::setIntersection(firingIntervals, arcFiringDates(arcInterval, transport->weight, place.tokens));
+          Util::setIntersection(firingIntervals, arcFiringDates(arcInterval, transport->weight, *place.tokens));
       if (firingIntervals.empty()) return firingIntervals;
     }
     printf("Firing in the hole\n");
@@ -359,8 +372,8 @@ struct CudaRunResult {
     return firingIntervals;
   }
 
-  __host__ __device__ CudaDynamicArray<Util::CudaInterval> arcFiringDates(CudaTimeInterval time_interval, uint32_t weight,
-                                                      CudaDynamicArray<CudaRealToken *> tokens) {
+  __host__ __device__ CudaDynamicArray<Util::CudaInterval>
+  arcFiringDates(CudaTimeInterval time_interval, uint32_t weight, CudaDynamicArray<CudaRealToken *> &tokens) {
 
     printf("Arc firing dates\n");
     Util::CudaInterval arcInterval(time_interval.lowerBound, time_interval.upperBound);
@@ -393,7 +406,9 @@ struct CudaRunResult {
         if (selected.size == weight) {
           Util::CudaInterval tokenSetInterval(0, HUGE_VAL);
           for (size_t k = 0; k < selected.size; k++) {
-            tokenSetInterval = Util::intersect(tokenSetInterval, Util::CudaInterval(selected.at(k), selected.at(k)));
+            Util::CudaInterval shifted = arcInterval;
+            shifted.delta(-selected.at(k));
+            tokenSetInterval = Util::intersect(tokenSetInterval, shifted);
           }
           Util::setAdd(firingIntervals, tokenSetInterval);
         }
@@ -402,12 +417,13 @@ struct CudaRunResult {
     return firingIntervals;
   }
 
-  __host__ __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> &tokenList,
-                                                 const CudaTimeInterval &interval, const int weight, int tid) {
+  __host__ __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> tokenList,
+                                                                     const CudaTimeInterval &interval, const int weight,
+                                                                     int tid) {
     printf("Remove random method is being called\n");
     auto res = CudaDynamicArray<CudaRealToken *>(tokenList.size);
     int remaning = weight;
-    
+
     size_t tok_index = CudaSMC::getRandomTokenIndex(&rngStates[tid], tokenList.size);
     size_t tested = 0;
 
@@ -505,19 +521,19 @@ struct CudaRunResult {
     for (size_t i = 0; i < transition->presetLength; i++) {
       CudaTimedInputArc *input = transition->preset[i];
       CudaRealPlace place = placeList[transition->preset[i]->inputPlace.index];
-      CudaDynamicArray<CudaRealToken *> &tokenList = place.tokens;
+      CudaDynamicArray<CudaRealToken *> *&tokenList = place.tokens;
       switch (transition->_firingMode) {
       case CudaSMC::FiringMode::Random:
-        removeRandom(tokenList, input->interval, input->weight, tid);
+        removeRandom(*tokenList, input->interval, input->weight, tid);
         break;
       case CudaSMC::FiringMode::Oldest:
-        removeOldest(tokenList, input->interval, input->weight);
+        removeOldest(*tokenList, input->interval, input->weight);
         break;
       case CudaSMC::FiringMode::Youngest:
-        removeYoungest(tokenList, input->interval, input->weight);
+        removeYoungest(*tokenList, input->interval, input->weight);
         break;
       default:
-        removeOldest(tokenList, input->interval, input->weight);
+        removeOldest(*tokenList, input->interval, input->weight);
         break;
       }
 
@@ -526,22 +542,22 @@ struct CudaRunResult {
         auto transport = transition->transportArcs[i];
         int destInv = transport->destination.timeInvariant.bound;
         CudaRealPlace place = placeList[transport->source.index];
-        CudaDynamicArray<CudaRealToken *> &tokenList = place.tokens;
+        CudaDynamicArray<CudaRealToken *> *&tokenList = place.tokens;
         CudaDynamicArray<CudaRealToken *> consumed(10);
         CudaTimeInterval &arcInterval = transport->interval;
         if (destInv < arcInterval.upperBound) arcInterval.setUpperBound(destInv, false);
         switch (transition->_firingMode) {
         case CudaSMC::FiringMode::Random:
-          consumed = removeRandom(tokenList, arcInterval, transport->weight, tid);
+          consumed = removeRandom(*tokenList, arcInterval, transport->weight, tid);
           break;
         case CudaSMC::FiringMode::Oldest:
-          consumed = removeOldest(tokenList, arcInterval, transport->weight);
+          consumed = removeOldest(*tokenList, arcInterval, transport->weight);
           break;
         case CudaSMC::FiringMode::Youngest:
-          consumed = removeYoungest(tokenList, arcInterval, transport->weight);
+          consumed = removeYoungest(*tokenList, arcInterval, transport->weight);
           break;
         default:
-          consumed = removeOldest(tokenList, arcInterval, transport->weight);
+          consumed = removeOldest(*tokenList, arcInterval, transport->weight);
           break;
         }
         for (size_t j = 0; j < consumed.size; j++) {
@@ -552,8 +568,8 @@ struct CudaRunResult {
       for (size_t i = 0; i < transition->postsetLength; i++) {
         CudaTimedPlace &place = transition->postset[i]->outputPlace;
         CudaTimedOutputArc *post = transition->postset[i];
-        auto token = CudaRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
-        child->addTokenInPlace(place, token);
+        auto token = new CudaRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
+        child->addTokenInPlace(place, *token);
       }
       for (size_t i = 0; i < toCreate.size; i++) {
         auto [place, token] = toCreate.get(i);

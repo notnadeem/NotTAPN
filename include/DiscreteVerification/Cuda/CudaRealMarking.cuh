@@ -21,25 +21,28 @@ struct CudaRealToken {
 
 struct CudaRealPlace {
   CudaTimedPlace place;
-  CudaDynamicArray<CudaRealToken *> tokens;
+  CudaDynamicArray<CudaRealToken *>* tokens;
 
-  __host__ __device__ CudaRealPlace() { tokens = CudaDynamicArray<CudaRealToken *>(); }
+  __host__ __device__ CudaRealPlace() { tokens = new CudaDynamicArray<CudaRealToken *>(10); }
 
   __host__ __device__ CudaRealPlace(CudaTimedPlace place, size_t tokensLength) : place(place) {
-    tokens = CudaDynamicArray<CudaRealToken *>(tokensLength);
+    tokens = new CudaDynamicArray<CudaRealToken *>(tokensLength);
   }
 
   __host__ __device__ inline void deltaAge(double x) {
-    for (size_t i = 0; i < tokens.size; i++) {
-      tokens.get(i)->deltaAge(x);
+    // print all the places
+    printf("place name: %s\n", place.name);
+    printf("deltaAge: %f\n", x);
+    for (size_t i = 0; i < tokens->size; i++) {
+      tokens->get(i)->deltaAge(x);
     }
   }
 
-  __host__ __device__ inline void addToken(CudaRealToken newToken) {
+  __host__ __device__ inline void addToken(CudaRealToken& newToken) {
     // got rid of pointers here, might break
     size_t index = 0;
-    for (size_t i = 0; i < tokens.size; i++) {
-      CudaRealToken *token = tokens.get(i);
+    for (size_t i = 0; i < tokens->size; i++) {
+      CudaRealToken *token = tokens->get(i);
       if (token->age == newToken.age) {
         token->add(newToken.count);
         return;
@@ -48,36 +51,36 @@ struct CudaRealPlace {
       index++;
     }
     // NOTE: Check if this works, might be a issue
-    if (index >= tokens.size) {
-      tokens.add(&newToken);
+    if (index >= tokens->size) {
+      tokens->add(&newToken);
     } else {
-      tokens.set(index, &newToken);
+      tokens->set(index, &newToken);
     }
   }
 
   __host__ __device__ inline double maxTokenAge() const {
-    if (tokens.size == 0) {
+    if (tokens->size == 0) {
       return HUGE_VAL;
     }
-    return tokens.get(tokens.size - 1)->age;
+    return tokens->get(tokens->size - 1)->age;
   }
 
   __host__ __device__ inline int totalTokenCount() const {
     int count = 0;
-    for (size_t i = 0; i < tokens.size; i++) {
-      count += tokens.get(i)->count;
+    for (size_t i = 0; i < tokens->size; i++) {
+      count += tokens->get(i)->count;
     }
     return count;
   }
 
   __host__ __device__ double availableDelay() const {
-    if (tokens.size == 0) return HUGE_VAL;
+    if (tokens->size == 0) return HUGE_VAL;
     
     double delay = ((double)place.timeInvariant.bound) - maxTokenAge();
     return delay <= 0.0f ? 0.0f : delay;
   }
 
-  __host__ __device__ inline bool isEmpty() const { return tokens.size == 0; }
+  __host__ __device__ inline bool isEmpty() const { return tokens->size == 0; }
 };
 
 struct CudaRealMarking {
@@ -103,6 +106,12 @@ struct CudaRealMarking {
     fromDelay = 0.0;
   }
 
+  __host__ __device__ CudaRealMarking(const CudaRealMarking& other) {
+      placesLength = other.placesLength;
+      places = other.places;
+      deadlocked = other.deadlocked;
+  }
+
   // NOTE: (For CUDA) You don't have to care about the destructor
   // Or just use teh cudaFree() function
   // Also not sure if destructors work in CUDA
@@ -123,8 +132,8 @@ struct CudaRealMarking {
     result->places = new CudaRealPlace[placesLength];
     for (size_t i = 0; i < placesLength; i++) {
       result->places[i].place = places[i].place;
-      for (size_t j = 0; j < places[i].tokens.size; j++) {
-        result->places[i].tokens.add(places[i].tokens.get(j));
+      for (size_t j = 0; j < places[i].tokens->size; j++) {
+        result->places[i].tokens->add(places[i].tokens->get(j));
       }
     }
     result->deadlocked = deadlocked;
@@ -150,7 +159,7 @@ struct CudaRealMarking {
   __host__ __device__ double availableDelay() const {
     double available = HUGE_VAL;
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].tokens.size == 0) continue;
+      if (places[i].tokens->size == 0) continue;
       double delay = places[i].availableDelay();
       if (delay < available) {
         available = delay;
