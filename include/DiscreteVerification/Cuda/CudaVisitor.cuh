@@ -58,7 +58,7 @@ public:
 
   __host__ __device__ virtual void visit(BoolExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(SimpleQuery &query, Result &context) = 0;
+  __host__ __device__ virtual void visit(CudaQuery &query, Result &context) = 0;
 
   __host__ __device__ virtual void visit(DeadlockExpression &expr, Result &context) = 0;
 

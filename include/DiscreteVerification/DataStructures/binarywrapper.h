@@ -337,7 +337,7 @@ namespace ptrie {
     template<class T>
     void binarywrapper_t<T>::copy(const uchar *raw, uint size) {
         if (size > 0) {
-            _blob = new char[size];
+            _blob = new uchar[size];
             memcpy(_blob, raw, size);
         }
     }

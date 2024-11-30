@@ -80,7 +80,7 @@ __host__ __device__ void setAdd(CudaDynamicArray<CudaInterval> &first, const Cud
 
     if (element.upper() < first.get(i).lower()) {
       // Add element
-      first.set(i, element);
+      first.insert(i, element);
       return;
     } else if (overlap(element, first.get(i))) {
       CudaInterval u = hull(element, first.get(i));

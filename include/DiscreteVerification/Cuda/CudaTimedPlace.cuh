@@ -11,7 +11,7 @@
 
 namespace VerifyTAPN {
 namespace Cuda {
-// TODO change to cuda because of arcs
+
 enum PlaceType { Inv, Dead, Std };
 
 struct CudaTimedPlace {
@@ -42,7 +42,6 @@ struct CudaTimedPlace {
 };
 
 } // namespace Atler
-
 }; // namespace VerifyTAPN
 
 #endif /* VERIFYYAPN_ATLER_SIMPLETIMEDPLACE_HPP_ */

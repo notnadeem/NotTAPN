@@ -13,7 +13,7 @@ set(VERIFYDTAPN_VERSION 3.6.0)
 project(
   ${VERIFYDTAPN_NAME}
   VERSION ${VERIFYDTAPN_VERSION}
-  LANGUAGES CXX C)
+  LANGUAGES CXX C CUDA)
 
 # Compile Commands
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -42,17 +42,12 @@ set(VERIFYDTAPN_OSX_DEPLOYMENT_TARGET
 # Configure Project
 
 # Configure Static
-if(VERIFYDTAPN_Static AND NOT BUILD_TESTING)
-  set(BUILD_SHARED_LIBS OFF)
-  if(NOT APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-  else()
-    set(CMAKE_EXE_LINKER_FLAGS
-        "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
-  endif()
-else()
-  set(BUILD_SHARED_LIBS ON)
-endif()
+if (VERIFYDTAPN_Static AND NOT BUILD_TESTING)
+    set(BUILD_SHARED_LIBS OFF)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+else ()
+    set(BUILD_SHARED_LIBS ON)
+endif ()
 
 # Configure Target Platform
 if(UNIX AND NOT APPLE)

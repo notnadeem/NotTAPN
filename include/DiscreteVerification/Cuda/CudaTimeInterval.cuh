@@ -12,7 +12,7 @@ struct CudaTimeInterval {
   int upperBound;
   bool isUpperBoundStrict;
 
-  __device__ static double epsilon() { return __DBL_EPSILON__; }
+ __host__ __device__ static double epsilon() { return __DBL_EPSILON__; }
 
   __host__ __device__ inline bool setUpperBound(int bound, bool isStrict) {
     if (upperBound == bound)

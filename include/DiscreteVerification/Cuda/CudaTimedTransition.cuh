@@ -10,6 +10,9 @@
 
 namespace VerifyTAPN {
 namespace Cuda {
+  
+struct CudaTimedInhibitorArc;
+
 struct CudaTimedTransition {
   int index = 0;
   const char* name;

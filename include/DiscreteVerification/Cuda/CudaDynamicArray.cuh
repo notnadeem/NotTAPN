@@ -20,7 +20,7 @@ template <typename T> struct CudaDynamicArray {
     cudaMallocManaged(&arr, capacity * sizeof(T));
   }
 
-  //Try no to use this constructor due to possible double memry freeing
+  // Try no to use this constructor due to possible double memry freeing
   __host__ ~CudaDynamicArray() { cudaFree(arr); }
 
   __host__ __device__ void resize() {
@@ -39,6 +39,20 @@ template <typename T> struct CudaDynamicArray {
       resize();
     }
     arr[size++] = value;
+  }
+
+  __host__ __device__ void insert(size_t index, T value) {
+    if (index >= size) {
+      printf("Index out of bounds: insert operation");
+    }
+    if (size >= capacity) {
+      resize();
+    }
+    for (size_t i = size - 1; i >= index; i--) {
+      arr[i + 1] = arr[i];
+    }
+    arr[index] = value;
+    size++;
   }
 
   __host__ __device__ void remove(size_t index) {

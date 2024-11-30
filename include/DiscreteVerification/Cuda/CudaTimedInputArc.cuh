@@ -4,10 +4,14 @@
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
 #include "DiscreteVerification/Cuda/CudaTimeInterval.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
+
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN {
 namespace Cuda {
+
+struct CudaTimedPlace;
+struct CudaTimedTransition;
 
 struct CudaTimedInputArc {
   CudaTimeInterval interval;

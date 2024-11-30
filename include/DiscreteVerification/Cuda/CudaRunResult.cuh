@@ -11,6 +11,7 @@
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
+#include "DiscreteVerification/Cuda/CudaPair.cuh"
 
 #include <cuda_runtime.h>
 #include <curand.h>
@@ -70,7 +71,7 @@ struct CudaRunResult {
 
   __host__ ~CudaRunResult() { cudaFree(rngStates); }
 
-  __host__ __device__ CudaRunResult *copy(int tid) const {
+  __device__ CudaRunResult *copy(int tid) const {
     CudaRunResult *clone = new CudaRunResult(tapn, numThreads, threadsPerBlock);
     clone->origin = new CudaRealMarking(*origin);
     clone->numericPrecision = numericPrecision;
@@ -79,7 +80,7 @@ struct CudaRunResult {
     return clone;
   }
 
-  __host__ __device__ void prepare(CudaRealMarking initMarking, int tid) {
+  __device__ void prepare(CudaRealMarking initMarking, int tid) {
     origin = new CudaRealMarking(initMarking);
     parent = new CudaRealMarking(initMarking);
     printf("Prepared\n");
@@ -111,7 +112,7 @@ struct CudaRunResult {
     reset(tid);
   }
 
-  void reset(int tid) {
+  __device__ void reset(int tid) {
     printf("Reset begining\n");
     transitionIntervals = defaultTransitionIntervals;
     // print transition intervals length
@@ -152,7 +153,7 @@ struct CudaRunResult {
     printf("Reset\n");
   }
 
-  __host__ __device__ void refreshTransitionsIntervals(int tid) {
+  __device__ void refreshTransitionsIntervals(int tid) {
     double max_delay = parent->availableDelay();
     CudaDynamicArray<Util::CudaInterval> invIntervals(10);
     invIntervals.add(Util::CudaInterval(0, max_delay));
@@ -191,7 +192,7 @@ struct CudaRunResult {
     parent->deadlocked = deadlocked;
   }
 
-  __host__ __device__ CudaRealMarking *next(int tid) {
+  __device__ CudaRealMarking *next(int tid) {
     auto [winner, delay] = getWinnerTransitionAndDelay(tid);
 
     if (delay == HUGE_VAL) {
@@ -231,7 +232,7 @@ struct CudaRunResult {
     return parent;
   }
 
-  __host__ __device__ std::pair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(int tid) {
+  __device__ std::pair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(int tid) {
     CudaDynamicArray<size_t> winner_indexes(10);
     double date_min = HUGE_VAL;
     // print transition intervals length
@@ -279,10 +280,10 @@ struct CudaRunResult {
     } else {
       winner = chooseWeightedWinner(winner_indexes, tid);
     }
-    return std::make_pair(winner, date_min);
+    return makeCudaPair(winner, date_min);
   }
 
-  __host__ __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
+ __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
                                                                 int tid) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
@@ -417,7 +418,7 @@ struct CudaRunResult {
     return firingIntervals;
   }
 
-  __host__ __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> tokenList,
+  __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> tokenList,
                                                                      const CudaTimeInterval &interval, const int weight,
                                                                      int tid) {
     printf("Remove random method is being called\n");
@@ -509,7 +510,7 @@ struct CudaRunResult {
     return res;
   }
 
-  CudaRealMarking *fire(CudaTimedTransition *transition, int tid) {
+  __device__ CudaRealMarking *fire(CudaTimedTransition *transition, int tid) {
     if (transition == nullptr) {
       assert(false);
       return nullptr;
@@ -561,7 +562,7 @@ struct CudaRunResult {
           break;
         }
         for (size_t j = 0; j < consumed.size; j++) {
-          toCreate.add(std::make_pair(&(transport->destination), consumed.get(j)));
+          toCreate.add(makeCudaPair(&(transport->destination), consumed.get(j)));
         }
       }
 

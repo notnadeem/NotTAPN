@@ -10,6 +10,9 @@
 
 namespace VerifyTAPN {
 namespace Cuda {
+
+struct CudaTimedArcPetriNet;
+
 struct CudaRealToken {
   double age;
   int count;

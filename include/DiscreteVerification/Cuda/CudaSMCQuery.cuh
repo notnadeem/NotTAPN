@@ -1,7 +1,7 @@
 #ifndef CUDASMCQUERIES_CUH
 #define CUDASMCQUERIES_CUH
 
-#include "DiscreteVerification/Atler/SimpleAST.hpp"
+#include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::Cuda::AST {
@@ -19,14 +19,14 @@ struct CudaSMCSettings {
   float geqThan;
 };
 
-class CudaSMCQuery : public Atler::AST::SimpleQuery {
+class CudaSMCQuery : public AST::CudaQuery {
 public:
-  __host__ __device__ CudaSMCQuery(Atler::AST::SimpleQuantifier quantifier, CudaSMCSettings settings,
-                 Atler::AST::SimpleExpression *expr)
-      : SimpleQuery(quantifier, expr), smcSettings(settings) {};
+  __host__ __device__ CudaSMCQuery(AST::CudaQuantifier quantifier, CudaSMCSettings settings,
+                 AST::CudaExpression *expr)
+      : AST::CudaQuery(quantifier, expr), smcSettings(settings) {};
 
   __host__ __device__ CudaSMCQuery(const CudaSMCQuery &other)
-      : SimpleQuery(other.quantifier, other.expr->clone()),
+      : AST::CudaQuery(other.quantifier, other.expr->clone()),
         smcSettings(other.smcSettings) {};
 
   __host__ __device__ CudaSMCQuery &operator=(const CudaSMCQuery &other) {
@@ -40,7 +40,7 @@ public:
 
   __host__ __device__ virtual CudaSMCQuery *clone() const override;
 
-  __host__ __device__ void accept(Atler::AST::SimpleVisitor &visitor, Atler::AST::Result &context) override;
+  __host__ __device__ void accept(AST::CudaVisitor &visitor, AST::Result &context) override;
 
   __host__ __device__ void setSMCSettings(CudaSMCSettings newSettings) {
     smcSettings = newSettings;
@@ -49,8 +49,8 @@ public:
   __host__ __device__ CudaSMCSettings &getSmcSettings() { return smcSettings; }
 
 public:
-  Atler::AST::SimpleQuantifier quantifier;
-  Atler::AST::SimpleExpression *expr;
+  AST::CudaQuantifier quantifier;
+  AST::CudaExpression *expr;
   CudaSMCSettings smcSettings;
 };
 

@@ -2,6 +2,7 @@
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
 #include "DiscreteVerification/Cuda/CudaSMCQueryConverter.cuh"
 #include "DiscreteVerification/Cuda/CudaTAPNConverter.cuh"
+#include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 
 #include <cuda_runtime.h>
@@ -10,27 +11,29 @@ namespace VerifyTAPN::DiscreteVerification {
 __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn,
                                     Cuda::CudaRealMarking *initialMarking,
                                     Cuda::AST::CudaSMCQuery *query,
-                                    Cuda::CudaRunResult *origRunner,
+                                    Cuda::CudaRunResult *runner,
                                     int *timeBound,
                                     int *stepBound,
                                     int *successCount,
                                     int *runsNeeded) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
+  if (tid >= runNeed) return;
+
   int tBound = *timeBound;
   int sBound = *stepBound;
-  if (tid >= runNeed) return;
-  // TODO Change to cudarunsresult
-  // Create local copy of the runner
-  Cuda::CudaRunResult runner = *origRunner;
-  // This error will disapear once CudaRunResult is implemented
-  Cuda::CudaRealMarking *newMarking = runner.parent;
 
-  while (!runner.maximal && !(runner.totalTime >= tBound || runner.totalSteps >= sBound)) {
+  Cuda::CudaTimedArcPetriNet tapn = *ctapn;
 
-    Cuda::CudaRealMarking child = *newMarking->clone();
-    Cuda::CudaQueryVisitor checker(child, *ctapn);
-    Atler::AST::BoolResult result;
+  // TODO prepare per thread
+  // runner.prepare(initialMarking);
+  Cuda::CudaRealMarking *newMarking = runner->parent;
+  
+  while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
+
+    Cuda::CudaRealMarking *child = newMarking->clone();
+    Cuda::CudaQueryVisitor checker(*child, tapn);
+    Cuda::AST::BoolResult result;
 
     query->accept(checker, result);
 
@@ -38,15 +41,14 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn,
       atomicAdd(successCount, 1);
       break;
     }
-    // This error will disapear once CudaRunResult is implemented
-    newMarking = runner.next(tid);
+    newMarking = runner->next(tid);
   }
 }
 
-bool AtlerProbabilityEstimation::run() {
+bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Converting TAPN and marking..." << std::endl;
   auto result = VerifyTAPN::Cuda::CudaTAPNConverter::convert(tapn, initialMarking);
-  VerifyTAPN::Cuda::CudaTimedArcPetriNet stapn = result->first;
+  VerifyTAPN::Cuda::CudaTimedArcPetriNet ctapn = result->first;
   VerifyTAPN::Cuda::CudaRealMarking ciMarking = result->second;
 
   std::cout << "Converting Query..." << std::endl;
@@ -67,7 +69,7 @@ bool AtlerProbabilityEstimation::run() {
 
   int blocks = 1;
   int threads = 1;
-  auto runres = VerifyTAPN::Cuda::CudaRunResult(stapn, blocks, threads);
+  auto runres = VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threads);
 
   std::cout << "Run prepare" << std::endl;
 
