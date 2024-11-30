@@ -51,29 +51,30 @@ bool AtlerProbabilityEstimation::run() {
 
   std::cout << "Creating run generator..." << std::endl;
   auto runres = Atler::AtlerRunResult(stapn);
-  std::cout << "Run prepare " << std::endl;
-  runres.prepare(siMarking);
+  std::cout << "Run prepare" << std::endl;
+  // runres.prepare(siMarking);
 
-  auto clones = new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
-  for (int i = 0; i < runsNeeded; i++) {
-    clones->add(runres.copy());
-  }
+  // auto clones =
+  //     new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
+  // for (int i = 0; i < runsNeeded; i++) {
+  //   clones->add(runres.copy());
+  // }
 
   int count = 0;
   int success = 0;
-  for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult *runner = clones->get(i);
+  for (int i = 0; i < 1; i++) {
+    auto runner = new Atler::AtlerRunResult(stapn);
+    runner->prepare(siMarking);
+    // Atler::AtlerRunResult *runner = clones->get(i);
     // runner->reset();
     bool runRes = false;
     Atler::SimpleRealMarking *newMarking = runner->parent;
-    while (!runner->maximal &&
-           !(runner->totalTime >= smcSettings.timeBound || runner->totalSteps >= smcSettings.stepBound)) {
-
+    while (!runner->maximal && !(reachedRunBound(runner))) {
       // print value of maximal
       std::cout << "Max: " << runner->maximal << std::endl;
 
-      Atler::SimpleRealMarking child = *newMarking->clone();
-      Atler::SimpleQueryVisitor checker(child, stapn);
+      Atler::SimpleRealMarking *child = newMarking->clone();
+      Atler::SimpleQueryVisitor checker(*child, stapn);
       Atler::AST::BoolResult result;
 
       simpleSMCQuery->accept(checker, result);
@@ -82,20 +83,38 @@ bool AtlerProbabilityEstimation::run() {
       if (runRes) {
         std::cout << "Success" << runRes << std::endl;
         success++;
-        break;
+        if (simpleSMCQuery->getQuantifier() != Atler::PG) {
+          break;
+        }
       }
 
       newMarking = runner->next();
 
-      std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
-      std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
-      std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
-      std::cout << "Total time: " << runner->totalTime << std::endl;
-      std::cout << "Total steps: " << runner->totalSteps << std::endl;
-      // std::cout << "After Max: " << runner->maximal << std::endl;
+      // print number of tokens in places
+      if (runner && newMarking) {
+        for (size_t i = 0; i < newMarking->placesLength; i++) {
+          std::cout << "Place " << newMarking->places[i].place.name << ": " << newMarking->places[i].tokens->size
+                    << " tokens" << std::endl;
+          for (size_t j = 0; j < newMarking->places[i].tokens->size; j++) {
+            std::cout << "  Token age: " << newMarking->places[i].tokens->get(j)->age << std::endl;
+          }
+        }
+
+        std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
+        std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
+        std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
+        std::cout << "Total time: " << runner->totalTime << std::endl;
+        std::cout << "Total steps: " << runner->totalSteps << std::endl;
+        std::cout << "After Max: " << runner->maximal << std::endl;
+      }
     }
     std::cout << "Number of runs: " << count << std::endl;
     std::cout << "Success: " << success << std::endl;
+
+    // print the default transition intervals
+    for (size_t i = 0; i < runner->defaultTransitionIntervals.size; i++) {
+      runner->defaultTransitionIntervals.get(i);
+    }
   }
 
   // Create clones of the run generator
@@ -122,98 +141,11 @@ bool AtlerProbabilityEstimation::run() {
   return false;
 }
 
-bool AtlerProbabilityEstimation::parallel_run() {
-  std::cout << "Converting TAPN and marking..." << std::endl;
-  auto result = Atler::SimpleTAPNConverter::convert(tapn, initialMarking);
-  Atler::SimpleTimedArcPetriNet stapn = result->first;
-  Atler::SimpleRealMarking siMarking = result->second;
+bool AtlerProbabilityEstimation::reachedRunBound(Atler::AtlerRunResult *generator) {
+  return generator->totalTime >= smcSettings.timeBound || generator->totalSteps >= smcSettings.stepBound;
+};
 
-  std::cout << "Converting Query..." << std::endl;
-  SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
-  Atler::AST::SimpleSMCQuery *simpleSMCQuery = Atler::AST::SimpleSMCQueryConverter::convert(currentSMCQuery);
-
-  std::cout << "Converting Options..." << std::endl;
-  Atler::SimpleVerificationOptions simpleOptions = Atler::SimpleOptionsConverter::convert(options);
-
-  // TODO: Convert the PlaceVisitor to a simple representation
-  // NOTE: Also find a way to simplify the representation of the PlaceVisitor
-
-  // Simulate prepare func
-  // setup the run generator
-
-  std::cout << "Creating run generator..." << std::endl;
-  auto runres = Atler::AtlerRunResult(stapn);
-  std::cout << "Run prepare " << std::endl;
-  runres.prepare(siMarking);
-
-  auto clones = new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
-  for (int i = 0; i < runsNeeded; i++) {
-    clones->add(runres.copy());
-  }
-
-  // Alloc memory here
-
-  int count = 0;
-  int success = 0;
-  for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult *runner = clones->get(i);
-    // runner->reset();
-    bool runRes = false;
-    Atler::SimpleRealMarking *newMarking = runner->parent;
-    while (!runner->maximal &&
-           !(runner->totalTime >= smcSettings.timeBound || runner->totalSteps >= smcSettings.stepBound)) {
-
-      // print value of maximal
-      std::cout << "Max: " << runner->maximal << std::endl;
-
-      Atler::SimpleRealMarking child = *newMarking->clone();
-      Atler::SimpleQueryVisitor checker(child, stapn);
-      Atler::AST::BoolResult result;
-
-      simpleSMCQuery->accept(checker, result);
-      runRes = result.value;
-
-      if (runRes) {
-        std::cout << "Success" << runRes << std::endl;
-        success++;
-        break;
-      }
-
-      newMarking = runner->next();
-
-      std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
-      std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
-      std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
-      std::cout << "Total time: " << runner->totalTime << std::endl;
-      std::cout << "Total steps: " << runner->totalSteps << std::endl;
-      // std::cout << "After Max: " << runner->maximal << std::endl;
-    }
-    std::cout << "Number of runs: " << count << std::endl;
-    std::cout << "Success: " << success << std::endl;
-  }
-
-  // Create clones of the run generator
-
-  // print all the transition intervals
-  // for (size_t i = 0; i < runres.transitionIntervals.size; i++) {
-  //   std::cout << "Transition " << i << ": ";
-  //   for (size_t j = 0; j < runres.transitionIntervals.get(i).size; j++) {
-  //     std::cout << "(" << runres.transitionIntervals.get(i).get(j).lower()
-  //               << ", " << runres.transitionIntervals.get(i).get(j).upper()
-  //               << ") ";
-  //   }
-  //   std::cout << std::endl;
-  // }
-
-  // End prepare
-  // std::cout << "Weight: " << stapn.places[0].inputArcs[0].weight <<
-  // std::endl; std::cout << "Number of places in simple tapn: " <<
-  // stapn.placesLength
-  //           << std::endl;
-  // std::cout << stapn.maxConstant << std::endl;
-  // std::cout << "Magic number: " << simpleSMCQuery->quantifier << std::endl;
-  // std::cout << "input length: " << simpleOptions.inputFile << std::endl;
-}
+bool AtlerProbabilityEstimation::parallel_run() { return false; }
 
 // void AtlerProbabilityEstimation::prepare() { return; }
 // bool AtlerProbabilityEstimation::executeRun(SMCRunGenerator *generator) {
@@ -230,10 +162,7 @@ void AtlerProbabilityEstimation::setMaxTokensIfGreater(unsigned int i) {
 // NOTE: This should not be necessary in the new implementation
 bool AtlerProbabilityEstimation::mustDoAnotherRun() { return numberOfRuns < runsNeeded; }
 
-// bool AtlerProbabilityEstimation::handleSuccessor(
-//     Atler::SimpleRealMarking *marking) {
-//         return false;
-// }
+bool AtlerProbabilityEstimation::handleSuccessor(Atler::SimpleRealMarking *marking) { return false; }
 
 float AtlerProbabilityEstimation::getEstimation() {
   float proba = ((float)validRuns) / numberOfRuns;

@@ -13,8 +13,8 @@ namespace VerifyTAPN {
 namespace Atler {
 struct SimpleTimedTransition {
   int index = 0;
-  std::string name;
-  std::string id;
+  const char* name;
+  const char* id;
 
   SimpleTimedInputArc** preset = nullptr;
   size_t presetLength = 0;
