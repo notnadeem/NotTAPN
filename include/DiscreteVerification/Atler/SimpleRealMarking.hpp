@@ -21,25 +21,28 @@ struct SimpleRealToken {
 
 struct SimpleRealPlace {
   SimpleTimedPlace place;
-  SimpleDynamicArray<SimpleRealToken *> tokens;
+  SimpleDynamicArray<SimpleRealToken *>* tokens;
 
-  SimpleRealPlace() { tokens = SimpleDynamicArray<SimpleRealToken *>(10); }
+  SimpleRealPlace() { tokens = new SimpleDynamicArray<SimpleRealToken *>(10); }
 
   SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength) : place(place) {
-    tokens = SimpleDynamicArray<SimpleRealToken *>(tokensLength);
+    tokens = new SimpleDynamicArray<SimpleRealToken *>(tokensLength);
   }
 
   // TODO: check if this works
   inline void deltaAge(double x) {
-    for (size_t i = 0; i < tokens.size; i++) {
-      tokens.get(i)->deltaAge(x);
+      // print all the places
+      std::cout << "place name: " << place.name << std::endl;
+      std::cout << "deltaAge: " << x << std::endl;
+    for (size_t i = 0; i < tokens->size; i++) {
+      tokens->get(i)->deltaAge(x);
     }
   }
 
-  inline void addToken(SimpleRealToken newToken) {
+  inline void addToken(SimpleRealToken& newToken) {
     size_t index = 0;
-    for (size_t i = 0; i < tokens.size; i++) {
-      SimpleRealToken *token = tokens.get(i);
+    for (size_t i = 0; i < tokens->size; i++) {
+      SimpleRealToken *token = tokens->get(i);
       if (token->age == newToken.age) {
         token->add(newToken.count);
         return;
@@ -49,37 +52,37 @@ struct SimpleRealPlace {
       index++;
     }
     // NOTE: Check if this works, might be a issue
-    if (index >= tokens.size) {
-      tokens.add(&newToken);
+    if (index >= tokens->size) {
+      tokens->add(&newToken);
     } else {
-      tokens.set(index, &newToken);
+      tokens->set(index, &newToken);
     }
   }
 
   inline double maxTokenAge() const {
-    if (tokens.size == 0) {
+    if (tokens->size == 0) {
       return -std::numeric_limits<double>::infinity();
     }
-    return tokens.get(tokens.size - 1)->age;
+    return tokens->get(tokens->size - 1)->age;
   }
 
   inline int totalTokenCount() const {
     int count = 0;
-    for (size_t i = 0; i < tokens.size; i++) {
-      count += tokens.get(i)->count;
+    for (size_t i = 0; i < tokens->size; i++) {
+      count += tokens->get(i)->count;
     }
     return count;
   }
 
   double availableDelay() const {
     // TODO: Change to CUDA implementation
-    if (tokens.size == 0)
+    if (tokens->size == 0)
       return std::numeric_limits<double>::infinity();
     double delay = ((double)place.timeInvariant.bound) - maxTokenAge();
     return delay <= 0.0f ? 0.0f : delay;
   }
 
-  inline bool isEmpty() const { return tokens.size == 0; }
+  inline bool isEmpty() const { return tokens->size == 0; }
 };
 
 struct SimpleRealMarking {
@@ -104,23 +107,29 @@ struct SimpleRealMarking {
     fromDelay = 0.0;
   }
 
+  SimpleRealMarking(const SimpleRealMarking& other) {
+      placesLength = other.placesLength;
+      places = other.places;
+      deadlocked = other.deadlocked;
+  }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
       places[i].deltaAge(x);
     }
   }
+
   SimpleRealMarking *clone() const {
       SimpleRealMarking *result = new SimpleRealMarking();
       result->placesLength = placesLength;
       result->places = new SimpleRealPlace[placesLength];
       for (size_t i = 0; i < placesLength; i++) {
         result->places[i].place = places[i].place;
-        for (size_t j = 0; j < places[i].tokens.size; j++) {
+        for (size_t j = 0; j < places[i].tokens->size; j++) {
           SimpleRealToken* newToken = new SimpleRealToken();
-          newToken->age = places[i].tokens.get(j)->age;
-          newToken->count = places[i].tokens.get(j)->count;
-          result->places[i].tokens.add(newToken);
+          newToken->age = places[i].tokens->get(j)->age;
+          newToken->count = places[i].tokens->get(j)->count;
+          result->places[i].tokens->add(newToken);
         }
       }
       result->deadlocked = deadlocked;
@@ -148,7 +157,7 @@ struct SimpleRealMarking {
   double availableDelay() const {
     double available = std::numeric_limits<double>::infinity();
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].tokens.size == 0)
+      if (places[i].tokens->size == 0)
         continue;
       double delay = places[i].availableDelay();
       if (delay < available) {

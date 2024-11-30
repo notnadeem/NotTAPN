@@ -236,7 +236,7 @@ public:
       for (size_t j = 0; j < tokenLength; j++) {
           //print token count
           std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
-        srm.places[i].tokens.add(new SimpleRealToken{
+        srm.places[i].tokens->add(new SimpleRealToken{
             realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
       }
 
@@ -268,8 +268,8 @@ private:
   convertTransition(const TAPN::TimedTransition &transition) {
     SimpleTimedTransition simpleTransition;
     simpleTransition.index = transition.getIndex();
-    simpleTransition.name = transition.getName();
-    simpleTransition.id = transition.getId();
+    simpleTransition.name = transition.getName().c_str();
+    simpleTransition.id = transition.getId().c_str();
     simpleTransition.untimedPostset = transition.hasUntimedPostset();
     simpleTransition.urgent = transition.isUrgent();
     simpleTransition.controllable = transition.isControllable();
