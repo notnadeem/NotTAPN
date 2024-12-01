@@ -68,7 +68,7 @@ struct CudaRunResult {
   //    }
   //  }
 
-  __host__ ~CudaRunResult() { cudaFree(rngStates); }
+  __host__ ~CudaRunResult() { }
 
   __device__ CudaRunResult *copy(int tid) const {
     CudaRunResult *clone = new CudaRunResult(tapn, numThreads, threadsPerBlock);
