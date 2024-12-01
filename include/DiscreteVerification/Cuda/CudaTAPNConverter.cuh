@@ -195,7 +195,7 @@ public:
 
     // Create and return new CudaTimedArcPetriNet
     auto cudaTapn = new CudaTimedArcPetriNet();
-    cudaTapn->places = *places;
+    cudaTapn->places = places;
     cudaTapn->placesLength = tapn.getPlaces().size();
     cudaTapn->transitions = transitions;
     cudaTapn->transitionsLength = tapn.getTransitions().size();

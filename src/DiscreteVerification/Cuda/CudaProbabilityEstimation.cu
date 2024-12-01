@@ -82,7 +82,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Threads per block..." << threadsPerBlock << std::endl;
   std::cout << "Blocks..." << blocks << std::endl;
 
-  auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
+  auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn);
 
   std::cout << "Run prepare" << std::endl;
 

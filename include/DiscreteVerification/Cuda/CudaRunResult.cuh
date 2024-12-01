@@ -36,17 +36,13 @@ struct CudaRunResult {
 
   uint numericPrecision;
   curandState_t *rngStates;
-  int numThreads;
-  int threadsPerBlock = 256;
 
   // add default constructor
   __host__ CudaRunResult() {}
 
-  __host__ CudaRunResult(CudaTimedArcPetriNet tapn, int blocks, int threadsPerBlock)
+  __host__ CudaRunResult(CudaTimedArcPetriNet tapn)
       : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength), transitionIntervals(tapn.transitionsLength),
         numericPrecision(numericPrecision) {
-    numThreads = blocks * threadsPerBlock;
-    cudaMalloc(&rngStates, numThreads * sizeof(curandState));
   }
 
   // Change this to cuda if needed
@@ -79,7 +75,7 @@ struct CudaRunResult {
   }
 
   __device__ CudaRunResult *copy(int tid) const {
-    CudaRunResult *clone = new CudaRunResult(tapn, numThreads, threadsPerBlock);
+    CudaRunResult *clone = new CudaRunResult(tapn);
     clone->origin = new CudaRealMarking(*origin);
     clone->numericPrecision = numericPrecision;
     clone->defaultTransitionIntervals = defaultTransitionIntervals;

@@ -10,14 +10,14 @@ template <typename T> struct CudaDynamicArray {
   size_t size;
   size_t capacity;
 
-  __host__ __device__ CudaDynamicArray() : size(0), capacity(1) { cudaMallocManaged(&arr, capacity * sizeof(T)); }
+  __host__ __device__ CudaDynamicArray() : size(0), capacity(1) { cudaMalloc(&arr, capacity * sizeof(T)); }
 
   __host__ __device__ CudaDynamicArray(size_t cap) : size(0) {
     if (cap == 0)
       capacity = 1;
     else
       capacity = cap;
-    cudaMallocManaged(&arr, capacity * sizeof(T));
+    cudaMalloc(&arr, capacity * sizeof(T));
   }
 
   // Try no to use this constructor due to possible double memry freeing
@@ -26,7 +26,7 @@ template <typename T> struct CudaDynamicArray {
   __host__ __device__ void resize() {
     capacity *= 2;
     T *temp;
-    cudaMallocManaged(&temp, capacity * sizeof(T));
+    cudaMalloc(&temp, capacity * sizeof(T));
     for (size_t i = 0; i < size; i++) {
       temp[i] = arr[i];
     }

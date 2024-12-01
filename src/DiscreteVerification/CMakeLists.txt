@@ -5,8 +5,9 @@ add_subdirectory(VerificationTypes)
 add_subdirectory(Generators)
 add_subdirectory(Atler)
 add_subdirectory(Cuda)
+add_subdirectory(Alloc)
 
 add_library(DiscreteVerification DeadlockVisitor.cpp DiscreteVerification.cpp)
 
 target_link_libraries(DiscreteVerification DataStructures Util SearchStrategies
-                      VerificationTypes Generators Atler Cuda)
+                      VerificationTypes Generators Atler Cuda Alloc)
