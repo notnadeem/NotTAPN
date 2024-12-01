@@ -38,7 +38,7 @@ public:
     return *this;
   }
 
-  __host__ __device__ ~NotExpression() override { delete expr; };
+  __host__ ~NotExpression() override { delete expr; };
 
   __host__ __device__ NotExpression *clone() const override;
 
@@ -54,7 +54,7 @@ class DeadlockExpression : public CudaExpression {
 public:
   __host__ __device__ explicit DeadlockExpression() = default;
 
-  __host__ __device__ ~DeadlockExpression() override = default;
+  __host__ ~DeadlockExpression() override = default;
 
   __host__ __device__ DeadlockExpression *clone() const override;
 
@@ -134,7 +134,7 @@ public:
     return *this;
   }
 
-  __host__ __device__ ~AndExpression() override {
+  __host__ ~AndExpression() override {
     delete left;
     delete right;
   }
@@ -171,7 +171,7 @@ public:
     return *this;
   }
 
-  __host__ __device__ ~OrExpression() override {
+  __host__ ~OrExpression() override {
     delete left;
     delete right;
   };

@@ -31,7 +31,7 @@ class PlusExpression;
 
 class ArithmeticExpression;
 
-class SimpleQuery;
+class CudaQuery;
 
 class Result {};
 

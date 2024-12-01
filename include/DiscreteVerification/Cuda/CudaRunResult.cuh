@@ -4,6 +4,7 @@
 #include "DiscreteVerification/Cuda/CudaDeque.cuh"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Cuda/CudaInterval.cuh"
+#include "DiscreteVerification/Cuda/CudaPair.cuh"
 #include "DiscreteVerification/Cuda/CudaRealMarking.cuh"
 #include "DiscreteVerification/Cuda/CudaStochasticStructure.cuh"
 #include "DiscreteVerification/Cuda/CudaTimeInterval.cuh"
@@ -11,7 +12,6 @@
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
-#include "DiscreteVerification/Cuda/CudaPair.cuh"
 
 #include <cuda_runtime.h>
 #include <curand.h>
@@ -48,6 +48,8 @@ struct CudaRunResult {
     numThreads = blocks * threadsPerBlock;
     cudaMalloc(&rngStates, numThreads * sizeof(curandState));
     CudaSMC::setup<<<blocks, threadsPerBlock>>>(rngStates);
+    // do this after the run ends
+    cudaFree(rngStates);
   }
 
   // Change this to cuda if needed
@@ -232,7 +234,7 @@ struct CudaRunResult {
     return parent;
   }
 
-  __device__ std::pair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(int tid) {
+  __device__ CudaPair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(int tid) {
     CudaDynamicArray<size_t> winner_indexes(10);
     double date_min = HUGE_VAL;
     // print transition intervals length
@@ -283,8 +285,7 @@ struct CudaRunResult {
     return makeCudaPair(winner, date_min);
   }
 
- __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
-                                                                int tid) {
+  __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes, int tid) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
@@ -419,8 +420,8 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> tokenList,
-                                                                     const CudaTimeInterval &interval, const int weight,
-                                                                     int tid) {
+                                                            const CudaTimeInterval &interval, const int weight,
+                                                            int tid) {
     printf("Remove random method is being called\n");
     auto res = CudaDynamicArray<CudaRealToken *>(tokenList.size);
     int remaning = weight;
@@ -450,7 +451,7 @@ struct CudaRunResult {
     return res;
   }
 
-  CudaDynamicArray<CudaRealToken *> removeYoungest(CudaDynamicArray<CudaRealToken *> &tokenList,
+  __device__ CudaDynamicArray<CudaRealToken *> removeYoungest(CudaDynamicArray<CudaRealToken *> &tokenList,
                                                    const CudaTimeInterval &interval, const int weight) {
     printf("Remove youngest method is being called\n");
 
@@ -481,8 +482,8 @@ struct CudaRunResult {
   }
 
   // NOTE: Double check this method to ensure it is correct
-  CudaDynamicArray<CudaRealToken *> removeOldest(CudaDynamicArray<CudaRealToken *> &tokenList,
-                                                 const CudaTimeInterval &timeInterval, const int weight) {
+  __device__ CudaDynamicArray<CudaRealToken *> removeOldest(CudaDynamicArray<CudaRealToken *> &tokenList,
+                                                            const CudaTimeInterval &timeInterval, const int weight) {
 
     auto res = CudaDynamicArray<CudaRealToken *>();
     int remaining = weight;
@@ -538,7 +539,7 @@ struct CudaRunResult {
         break;
       }
 
-      auto toCreate = CudaDynamicArray<std::pair<CudaTimedPlace *, CudaRealToken *>>(10);
+      auto toCreate = CudaDynamicArray<CudaPair<CudaTimedPlace *, CudaRealToken *>>(10);
       for (size_t i = 0; i < transition->transportArcsLength; i++) {
         auto transport = transition->transportArcs[i];
         int destInv = transport->destination.timeInvariant.bound;

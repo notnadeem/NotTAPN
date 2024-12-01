@@ -64,7 +64,7 @@ struct Distribution {
   DistributionType type;
   DistributionParameters parameters;
 
-   __device__ double sample(curandState_t *state, const unsigned int precision = 0) const {
+  __device__ double sample(curandState_t *state, const unsigned int precision = 0) const {
     double date = 0;
     switch (type) {
     case Constant:
@@ -130,7 +130,9 @@ struct Distribution {
 __global__ void setup(curandState_t *states) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   curand_init(clock64(), tid, 0, &states[tid]);
-  printf("Thread %d initialized\n", tid);
+  if (tid % 1000 == 0) {
+    printf("Thread %d initialized\n", tid);
+  }
 };
 
 __device__ int getRandomTokenIndex(curandState_t *state, int maxValue) {

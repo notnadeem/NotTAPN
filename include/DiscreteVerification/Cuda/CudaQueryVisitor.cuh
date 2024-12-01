@@ -11,7 +11,9 @@
 namespace VerifyTAPN {
 namespace Cuda {
 
-class CudaQueryVisitor : public AST::CudaVisitor {
+using namespace AST;
+
+class CudaQueryVisitor : public CudaVisitor {
 public:
   __host__ __device__ CudaQueryVisitor(CudaRealMarking &marking, const CudaTimedArcPetriNet &tapn, int maxDelay)
       : marking(marking), tapn(tapn), maxDelay(maxDelay) {

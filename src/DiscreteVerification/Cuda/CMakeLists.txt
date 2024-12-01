@@ -1,3 +1,3 @@
 find_package(CUDAToolkit REQUIRED)
 
-add_library(Cuda CudaProbabilityEstimation.cu)
+add_library(Cuda CudaProbabilityEstimation.cu CudaAST.cu CudaSMCQuery.cu)

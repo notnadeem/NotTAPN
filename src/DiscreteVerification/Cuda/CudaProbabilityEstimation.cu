@@ -1,21 +1,16 @@
+#include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/Cuda/CudaQueryVisitor.cuh"
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
 #include "DiscreteVerification/Cuda/CudaSMCQueryConverter.cuh"
 #include "DiscreteVerification/Cuda/CudaTAPNConverter.cuh"
-#include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
-__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn,
-                                    Cuda::CudaRealMarking *initialMarking,
-                                    Cuda::AST::CudaSMCQuery *query,
-                                    Cuda::CudaRunResult *runner,
-                                    int *timeBound,
-                                    int *stepBound,
-                                    int *successCount,
-                                    int *runsNeeded) {
+__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
+                                    Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
+                                    int *stepBound, int *successCount, int *runsNeeded) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
   if (tid >= runNeed) return;
@@ -28,7 +23,7 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn,
   // TODO prepare per thread
   // runner.prepare(initialMarking);
   Cuda::CudaRealMarking *newMarking = runner->parent;
-  
+
   while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
 
     Cuda::CudaRealMarking *child = newMarking->clone();
@@ -65,11 +60,24 @@ bool AtlerProbabilityEstimation::runCuda() {
   // setup the run generator
 
   std::cout << "Creating run generator..." << std::endl;
-  // TODO
 
-  int blocks = 1;
-  int threads = 1;
-  auto runres = VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threads);
+  cudaDeviceProp deviceProp;
+  cudaError_t cudaStatus = cudaGetDeviceProperties(&deviceProp, 0); // Device 0
+  if (cudaStatus != cudaSuccess) {
+    std::cerr << "cudaGetDeviceProperties failed! CUDA Error: " << cudaGetErrorString(cudaStatus) << std::endl;
+    return false;
+  }
+
+  const unsigned int threadsPerBlock = 256;
+
+  // Calculate the number of blocks needed
+  unsigned int blocks = (this->runsNeeded + threadsPerBlock - 1) / threadsPerBlock;
+
+  std::cout << "Runs needed..." << this->runsNeeded << std::endl;
+  std::cout << "Threads per block..." << threadsPerBlock << std::endl;
+  std::cout << "Blocks..." << blocks << std::endl;
+
+  auto runres = VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
 
   std::cout << "Run prepare" << std::endl;
 
@@ -77,6 +85,22 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   // VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threads>>>(
   //     stapn, ciMarking, cudaSMCQuery, runres, smcSettings.timeBound, smcSettings.stepBound, 0, runsNeeded);
+
+  // Check for kernel launch errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    return false;
+  }
+
+  // Optionally, synchronize to ensure kernel completion
+  err = cudaDeviceSynchronize();
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
+    return false;
+  }
+
+  std::cout << "Kernel execution completed successfully." << std::endl;
 
   return false;
 }

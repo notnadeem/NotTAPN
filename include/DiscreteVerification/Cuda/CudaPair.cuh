@@ -10,6 +10,8 @@ namespace VerifyTAPN::Cuda {
         T1 first;
         T2 second;
         
+        __host__ __device__ CudaPair() : first(), second() {}
+
         __host__ __device__ CudaPair(T1 f, T2 s) : first(f), second(s) {}
         
         // Add conversion operator to std::pair
