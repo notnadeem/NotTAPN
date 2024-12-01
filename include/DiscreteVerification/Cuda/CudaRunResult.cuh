@@ -68,7 +68,15 @@ struct CudaRunResult {
   //    }
   //  }
 
-  __host__ ~CudaRunResult() { }
+  __host__ ~CudaRunResult() {
+    cudaError_t freeStatus = cudaFree(rngStates);
+
+    if (freeStatus != cudaSuccess) {
+      std::cerr << "cudaFree failed: " << cudaGetErrorString(freeStatus) << std::endl;
+    } else {
+      std::cout << "Device memory freed successfully." << std::endl;
+    }
+  }
 
   __device__ CudaRunResult *copy(int tid) const {
     CudaRunResult *clone = new CudaRunResult(tapn, numThreads, threadsPerBlock);

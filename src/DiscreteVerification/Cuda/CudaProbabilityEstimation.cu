@@ -82,7 +82,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Threads per block..." << threadsPerBlock << std::endl;
   std::cout << "Blocks..." << blocks << std::endl;
 
-  auto runres = VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
+  auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
 
   std::cout << "Run prepare" << std::endl;
 
@@ -91,7 +91,6 @@ bool AtlerProbabilityEstimation::runCuda() {
   // VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threads>>>(
   //     stapn, ciMarking, cudaSMCQuery, runres, smcSettings.timeBound, smcSettings.stepBound, 0, runsNeeded);
 
-  // Check for kernel launch errors
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
@@ -105,14 +104,7 @@ bool AtlerProbabilityEstimation::runCuda() {
     return false;
   }
 
-  cudaError_t freeStatus = cudaFree(runres.rngStates);
-
-  if (freeStatus != cudaSuccess) {
-    std::cerr << "cudaFree failed: " << cudaGetErrorString(freeStatus) << std::endl;
-    return false; // Or handle the error as appropriate
-  } else {
-    std::cout << "Device memory freed successfully." << std::endl;
-  }
+  delete runres;
 
   std::cout << "Kernel execution completed successfully." << std::endl;
 
