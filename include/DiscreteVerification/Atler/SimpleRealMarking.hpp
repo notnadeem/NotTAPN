@@ -31,9 +31,9 @@ struct SimpleRealPlace {
 
   // TODO: check if this works
   inline void deltaAge(double x) {
-      // print all the places
-      std::cout << "place name: " << place.name << std::endl;
-      std::cout << "deltaAge: " << x << std::endl;
+    // print all the places
+    std::cout << "place name: " << place.name << std::endl;
+    std::cout << "deltaAge: " << x << std::endl;
     for (size_t i = 0; i < tokens->size; i++) {
       tokens->get(i)->deltaAge(x);
     }
@@ -55,7 +55,7 @@ struct SimpleRealPlace {
     if (index >= tokens->size) {
       tokens->add(&newToken);
     } else {
-      tokens->set(index, &newToken);
+      tokens->insert2(index, &newToken);
     }
   }
 
@@ -93,24 +93,12 @@ struct SimpleRealMarking {
   const SimpleTimedTransition *generatedBy = nullptr;
   double fromDelay = 0.0;
 
-  SimpleRealMarking() {
-      places = new SimpleRealPlace[0];
-      deadlocked = false;
-      generatedBy = nullptr;
-      fromDelay = 0.0;
-    }
+  SimpleRealMarking() {}
 
-  SimpleRealMarking(size_t placesLength) : placesLength(placesLength) {
-    places = new SimpleRealPlace[placesLength];
-    deadlocked = false;
-    generatedBy = nullptr;
-    fromDelay = 0.0;
-  }
-
-  SimpleRealMarking(const SimpleRealMarking& other) {
-      placesLength = other.placesLength;
-      places = other.places;
-      deadlocked = other.deadlocked;
+  SimpleRealMarking(const SimpleRealMarking &other) {
+    placesLength = other.placesLength;
+    places = other.places;
+    deadlocked = other.deadlocked;
   }
 
   void deltaAge(double x) {
@@ -119,45 +107,28 @@ struct SimpleRealMarking {
     }
   }
 
-  SimpleRealMarking *clone() const {
-      SimpleRealMarking *result = new SimpleRealMarking();
-      result->placesLength = placesLength;
-      result->places = new SimpleRealPlace[placesLength];
-      for (size_t i = 0; i < placesLength; i++) {
-        result->places[i].place = places[i].place;
-        for (size_t j = 0; j < places[i].tokens->size; j++) {
-          SimpleRealToken* newToken = new SimpleRealToken();
-          newToken->age = places[i].tokens->get(j)->age;
-          newToken->count = places[i].tokens->get(j)->count;
-          result->places[i].tokens->add(newToken);
-        }
-      }
-      result->deadlocked = deadlocked;
-      result->generatedBy = generatedBy;
-      result->fromDelay = fromDelay;
-      return result;
-    }
-
   uint32_t numberOfTokensInPlace(int placeId) const {
     return places[placeId].totalTokenCount();
   }
 
-  void addTokenInPlace(SimpleTimedPlace &place, SimpleRealToken& newToken) {
-      places[place.index].addToken(newToken);
+  void addTokenInPlace(SimpleTimedPlace &place, SimpleRealToken &newToken) {
+    places[place.index].addToken(newToken);
   }
 
-  bool canDeadlock(const SimpleTimedArcPetriNet &tapn, int maxDelay, bool ignoreCanDelay) const {
-      return deadlocked;
+  bool canDeadlock(const SimpleTimedArcPetriNet &tapn, int maxDelay,
+                   bool ignoreCanDelay) const {
+    return deadlocked;
   }
 
-  inline bool canDeadlock(const SimpleTimedArcPetriNet &tapn, const int maxDelay) const {
-      return canDeadlock(tapn, maxDelay, false);
+  inline bool canDeadlock(const SimpleTimedArcPetriNet &tapn,
+                          const int maxDelay) const {
+    return canDeadlock(tapn, maxDelay, false);
   };
 
   double availableDelay() const {
     double available = std::numeric_limits<double>::infinity();
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].tokens->size == 0)
+      if (places[i].isEmpty())
         continue;
       double delay = places[i].availableDelay();
       if (delay < available) {

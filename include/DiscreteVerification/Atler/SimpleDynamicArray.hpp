@@ -2,6 +2,7 @@
 #define VERIFYTAPN_ATLER_SIMPLEDYNAMICARRAY_HPP_
 
 #include <cstddef>
+#include <iostream>
 #include <stdexcept>
 
 namespace VerifyTAPN::Atler {
@@ -14,9 +15,10 @@ template <typename T> struct SimpleDynamicArray {
   SimpleDynamicArray() : size(0), capacity(1) { arr = new T[capacity]; }
 
   SimpleDynamicArray(size_t initialCapacity) : size(0) {
-      capacity = (initialCapacity == 0) ? 1 : initialCapacity;
-      if(capacity == 0) capacity = 1;
-      arr = new T[capacity];
+    capacity = (initialCapacity == 0) ? 1 : initialCapacity;
+    if (capacity == 0)
+      capacity = 1;
+    arr = new T[capacity];
   }
 
   void resize() {
@@ -34,6 +36,38 @@ template <typename T> struct SimpleDynamicArray {
       resize();
     }
     arr[size++] = value;
+  }
+
+  // This function takes an index and adds the value at that index and moves all
+  // the values after it to the right
+  void insert(size_t index, T value) {
+    if (index >= size) {
+      throw std::out_of_range("Index out of bounds: insert operation");
+    }
+    if (size >= capacity) {
+      resize();
+    }
+    for (size_t i = size - 1; i >= index; i--) {
+      arr[i + 1] = arr[i];
+    }
+    arr[index] = value;
+    size++;
+  }
+
+  void insert2(size_t index, T value) {
+    std::cout << "insert2" << std::endl;
+    if (index > size) { // Allow inserting at the end
+      throw std::out_of_range("Index out of bounds: insert operation");
+    }
+    if (size >= capacity) {
+      resize();
+    }
+    // Shift elements to the right starting from the end
+    for (size_t i = size; i > index; i--) {
+      arr[i] = arr[i - 1];
+    }
+    arr[index] = value;
+    size++;
   }
 
   // NOTE: This function is not efficient, it is only used for simplicity
@@ -58,10 +92,9 @@ template <typename T> struct SimpleDynamicArray {
     size -= count;
   }
 
-  // NOTE: if the array contains pointers, we need to delete them and set all the values to nullptr
-  void clear() {
-    size = 0;
-  }
+  // NOTE: if the array contains pointers, we need to delete them and set all
+  // the values to nullptr
+  void clear() { size = 0; }
 
   void set(size_t index, T value) {
     if (index >= size) {

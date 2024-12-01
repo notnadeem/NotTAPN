@@ -10,7 +10,6 @@
 namespace VerifyTAPN {
 namespace Atler {
 
-
 template <typename T>
 struct SimpleDeque {
     struct Node {

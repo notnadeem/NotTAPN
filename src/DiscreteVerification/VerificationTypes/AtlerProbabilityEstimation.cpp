@@ -70,7 +70,7 @@ bool AtlerProbabilityEstimation::run() {
   int success = 0;
   for (int i = 0; i < 1; i++) {
     auto runner = new Atler::AtlerRunResult(stapn);
-    runner->prepare(siMarking);
+    runner->prepare(&siMarking);
     // Atler::AtlerRunResult *runner = clones->get(i);
     // runner->reset();
     bool runRes = false;
@@ -79,7 +79,7 @@ bool AtlerProbabilityEstimation::run() {
       // print value of maximal
       std::cout << "Max: " << runner->maximal << std::endl;
 
-      Atler::SimpleRealMarking *child = newMarking->clone();
+      Atler::SimpleRealMarking *child = new Atler::SimpleRealMarking(*newMarking);
       Atler::SimpleQueryVisitor checker(*child, stapn);
       Atler::AST::BoolResult result;
 
@@ -98,11 +98,17 @@ bool AtlerProbabilityEstimation::run() {
 
       // print number of tokens in places
       if (runner && newMarking) {
+        std::cout << "New marking state" << std::endl;
+        std::cout << "New place tokens length: " << newMarking->placesLength
+                  << std::endl;
         for (size_t i = 0; i < newMarking->placesLength; i++) {
-            std::cout << "Place " << newMarking->places[i].place.name << ": " << newMarking->places[i].tokens->size << " tokens" << std::endl;
-            for (size_t j = 0; j < newMarking->places[i].tokens->size; j++) {
-              std::cout << "  Token age: " << newMarking->places[i].tokens->get(j)->age << std::endl;
-            }
+          std::cout << "New place tokens length: "
+                    << newMarking->places[i].tokens->size << std::endl;
+          for (size_t j = 0; j < newMarking->places[i].tokens->size; j++) {
+            auto token = newMarking->places[i].tokens->get(j);
+            std::cout << "Token age: " << token->age << std::endl;
+            std::cout << "Token count: " << token->count << std::endl;
+          }
         }
 
         std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
@@ -120,6 +126,7 @@ bool AtlerProbabilityEstimation::run() {
     for (size_t i = 0; i < runner->defaultTransitionIntervals.size; i++) {
       runner->defaultTransitionIntervals.get(i);
     }
+
   }
 
   // Create clones of the run generator

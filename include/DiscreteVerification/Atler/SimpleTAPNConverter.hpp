@@ -214,7 +214,11 @@ public:
 
     // Create and return new SimpleRealMarking
     std::cout << "Converting Marking..." << std::endl;
-    SimpleRealMarking srm(marking.getPlaceList().size());
+
+
+    SimpleRealMarking srm;
+    srm.placesLength = marking.getPlaceList().size();
+    srm.places = new SimpleRealPlace[srm.placesLength];
     srm.deadlocked = marking.canDeadlock(tapn, false);
     srm.fromDelay = marking.getPreviousDelay();
     srm.generatedBy = marking.getGeneratedBy() != nullptr
@@ -299,8 +303,8 @@ private:
           &placeMap,
       const std::unordered_map<const TAPN::TimedTransition *,
                                SimpleTimedTransition *> &transitionMap) {
-    return {*transitionMap.at(&arc.getInputTransition()),
-            *placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
+    return {transitionMap.at(&arc.getInputTransition()),
+            placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
   }
 
   static SimpleTimedTransportArc convertTransportArc(
@@ -346,6 +350,7 @@ private:
 
   static SimpleTimeInvariant
   convertTimeInvariant(const TAPN::TimeInvariant &invariant) {
+      //print the invariant
     return {invariant.isBoundStrict(), invariant.getBound()};
   }
 
