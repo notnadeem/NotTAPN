@@ -10,10 +10,15 @@
 namespace VerifyTAPN::DiscreteVerification {
 __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
-                                    int *stepBound, int *successCount, int *runsNeeded) {
+                                    int *stepBound, int *successCount, int *runsNeeded, curandState *states) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
   if (tid >= runNeed) return;
+
+  curand_init(clock64(), tid, 0, &states[tid]);
+  if (tid % 1000 == 0) {
+    printf("Thread %d initialized\n", tid);
+  }
 
   int tBound = *timeBound;
   int sBound = *stepBound;
@@ -93,11 +98,20 @@ bool AtlerProbabilityEstimation::runCuda() {
     return false;
   }
 
-  // Optionally, synchronize to ensure kernel completion
   err = cudaDeviceSynchronize();
+
   if (err != cudaSuccess) {
     std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
     return false;
+  }
+
+  cudaError_t freeStatus = cudaFree(runres.rngStates);
+
+  if (freeStatus != cudaSuccess) {
+    std::cerr << "cudaFree failed: " << cudaGetErrorString(freeStatus) << std::endl;
+    return false; // Or handle the error as appropriate
+  } else {
+    std::cout << "Device memory freed successfully." << std::endl;
   }
 
   std::cout << "Kernel execution completed successfully." << std::endl;

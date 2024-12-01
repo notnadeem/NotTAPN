@@ -47,9 +47,6 @@ struct CudaRunResult {
         numericPrecision(numericPrecision) {
     numThreads = blocks * threadsPerBlock;
     cudaMalloc(&rngStates, numThreads * sizeof(curandState));
-    CudaSMC::setup<<<blocks, threadsPerBlock>>>(rngStates);
-    // do this after the run ends
-    cudaFree(rngStates);
   }
 
   // Change this to cuda if needed
@@ -452,7 +449,7 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<CudaRealToken *> removeYoungest(CudaDynamicArray<CudaRealToken *> &tokenList,
-                                                   const CudaTimeInterval &interval, const int weight) {
+                                                              const CudaTimeInterval &interval, const int weight) {
     printf("Remove youngest method is being called\n");
 
     auto res = CudaDynamicArray<CudaRealToken *>();

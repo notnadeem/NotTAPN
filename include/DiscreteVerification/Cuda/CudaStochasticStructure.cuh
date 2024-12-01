@@ -127,14 +127,6 @@ struct Distribution {
   std::string toXML() const;
 };
 
-__global__ void setup(curandState_t *states) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  curand_init(clock64(), tid, 0, &states[tid]);
-  if (tid % 1000 == 0) {
-    printf("Thread %d initialized\n", tid);
-  }
-};
-
 __device__ int getRandomTokenIndex(curandState_t *state, int maxValue) {
   // Generate random float in [0,1)
   float rand = curand_uniform(state);
