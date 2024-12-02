@@ -12,6 +12,10 @@
 namespace VerifyTAPN {
 namespace Cuda {
 
+struct CudaTimedInputArc;
+struct CudaTimedInhibitorArc;
+struct CudaTimedInputArc;
+
 enum PlaceType { Inv, Dead, Std };
 
 struct CudaTimedPlace {

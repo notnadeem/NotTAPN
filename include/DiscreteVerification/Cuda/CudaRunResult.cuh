@@ -43,6 +43,15 @@ struct CudaRunResult {
   __host__ CudaRunResult(CudaTimedArcPetriNet tapn)
       : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength), transitionIntervals(tapn.transitionsLength),
         numericPrecision(numericPrecision) {
+    numThreads = blocks * threadsPerBlock;
+    cudaMalloc(&rngStates, numThreads * sizeof(curandState));
+    //Print allocation status
+    cudaError_t allocStatus = cudaGetLastError();
+    if (allocStatus != cudaSuccess) {
+      std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
+    } else {
+      std::cout << "Device memory for curand allocated successfully." << std::endl;
+    }
   }
 
   // Change this to cuda if needed
@@ -332,7 +341,7 @@ struct CudaRunResult {
       printf("Preset arc length: %d\n", transition.presetLength);
       auto inhib = transition.inhibitorArcs[i];
       printf("Inhibitor arc 2\n");
-      if (parent->numberOfTokensInPlace(inhib->inputPlace.index) >= inhib->weight) {
+      if (parent->numberOfTokensInPlace(inhib->inputPlace->index) >= inhib->weight) {
         printf("Inhibitor arc 3\n");
         return disabled;
       }
@@ -340,7 +349,7 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      CudaRealPlace place = parent->places[arc->inputPlace.index];
+      CudaRealPlace place = parent->places[arc->inputPlace->index];
 
       printf("Preset arc\n");
       printf("place name: %s\n", place.place.name);
@@ -358,10 +367,10 @@ struct CudaRunResult {
     for (size_t i = 0; i < transition.transportArcsLength; i++) {
       printf("Transport arc\n");
       auto transport = transition.transportArcs[i];
-      auto &place = parent->places[transport->source.index];
+      auto &place = parent->places[transport->source->index];
       if (place.isEmpty()) return disabled;
 
-      Atler::SimpleTimeInvariant targetInvariant = transport->destination.timeInvariant;
+      Atler::SimpleTimeInvariant targetInvariant = transport->destination->timeInvariant;
       CudaTimeInterval arcInterval = transport->interval;
       if (targetInvariant.bound < arcInterval.upperBound) {
         arcInterval.setUpperBound(targetInvariant.bound, targetInvariant.isBoundStrict);
@@ -523,7 +532,7 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       CudaTimedInputArc *input = transition->preset[i];
-      CudaRealPlace place = placeList[transition->preset[i]->inputPlace.index];
+      CudaRealPlace place = placeList[transition->preset[i]->inputPlace->index];
       CudaDynamicArray<CudaRealToken *> *&tokenList = place.tokens;
       switch (transition->_firingMode) {
       case CudaSMC::FiringMode::Random:
@@ -543,8 +552,8 @@ struct CudaRunResult {
       auto toCreate = CudaDynamicArray<CudaPair<CudaTimedPlace *, CudaRealToken *>>(10);
       for (size_t i = 0; i < transition->transportArcsLength; i++) {
         auto transport = transition->transportArcs[i];
-        int destInv = transport->destination.timeInvariant.bound;
-        CudaRealPlace place = placeList[transport->source.index];
+        int destInv = transport->destination->timeInvariant.bound;
+        CudaRealPlace place = placeList[transport->source->index];
         CudaDynamicArray<CudaRealToken *> *&tokenList = place.tokens;
         CudaDynamicArray<CudaRealToken *> consumed(10);
         CudaTimeInterval &arcInterval = transport->interval;
@@ -564,12 +573,12 @@ struct CudaRunResult {
           break;
         }
         for (size_t j = 0; j < consumed.size; j++) {
-          toCreate.add(makeCudaPair(&(transport->destination), consumed.get(j)));
+          toCreate.add(makeCudaPair((transport->destination), consumed.get(j)));
         }
       }
 
       for (size_t i = 0; i < transition->postsetLength; i++) {
-        CudaTimedPlace &place = transition->postset[i]->outputPlace;
+        CudaTimedPlace &place = *(transition->postset[i]->outputPlace);
         CudaTimedOutputArc *post = transition->postset[i];
         auto token = new CudaRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
         child->addTokenInPlace(place, *token);

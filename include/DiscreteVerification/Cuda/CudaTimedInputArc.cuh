@@ -15,8 +15,8 @@ struct CudaTimedTransition;
 
 struct CudaTimedInputArc {
   CudaTimeInterval interval;
-  CudaTimedPlace &inputPlace;
-  CudaTimedTransition &outputTransition;
+  CudaTimedPlace *inputPlace;
+  CudaTimedTransition *outputTransition;
   const uint32_t weight;
 };
 

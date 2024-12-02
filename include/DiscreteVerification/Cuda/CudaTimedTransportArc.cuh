@@ -14,9 +14,9 @@ class CudaTimedPlace;
 
 struct CudaTimedTransportArc {
   CudaTimeInterval interval;
-  CudaTimedPlace &source;
-  CudaTimedTransition &transition;
-  CudaTimedPlace &destination;
+  CudaTimedPlace *source;
+  CudaTimedTransition *transition;
+  CudaTimedPlace *destination;
   const int weight;
 };
 
