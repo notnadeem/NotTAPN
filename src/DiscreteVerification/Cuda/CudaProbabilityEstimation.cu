@@ -46,24 +46,22 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::Cud
   }
 }
 
-__global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet* pn){
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  
-  if(tid == 0){
+__global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn, u_int *runNeed) {
+
   printf("Petri net maxConstant: %s\n", pn->maxConstant);
   printf("Petri net placesLength: %d\n", pn->placesLength);
-  for(int i = 0; i < pn->placesLength; i++){
+  for (int i = 0; i < pn->placesLength; i++) {
     printf("Place id: %d\n", pn->places[i]->id);
     printf("Place name: %s\n", pn->places[i]->name);
     printf("Place invariant: %s\n", pn->places[i]->timeInvariant);
     printf("Place type: %s\n", pn->places[i]->type);
     printf("Place containsInhibitorArcs: %s\n", pn->places[i]->containsInhibitorArcs);
     printf("Place inputArcsLength: %d\n", pn->places[i]->inputArcsLength);
-    for(int x = 0; x < pn->places[i]->inputArcsLength; x++){
+    for (int x = 0; x < pn->places[i]->inputArcsLength; x++) {
       printf("Place inputArcs[%d]: %s\n", x, pn->places[i]->inputArcs[x]->weight);
     }
-  }
-  printf("Kernel executed\n");
+
+    printf("Kernel executed\n");
   }
 };
 
@@ -98,19 +96,26 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   VerifyTAPN::Alloc::CudaPetriNetAllocator pnAllocator;
 
-  VerifyTAPN::Cuda::CudaTimedArcPetriNet* pn = pnAllocator.cuda_allocator(&ctapn);
+  VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn = pnAllocator.cuda_allocator(&ctapn);
 
-  testAllocationKernel<<<blocks, threadsPerBlock>>>(pn);
+  testAllocationKernel<<<1, 1>>>(pn, &this->runsNeeded);
   // Allocate the initial marking
 
-  //Allocate the query
+  // cudaError_t err = cudaGetLastError();
+  // if (err != cudaSuccess) {
+  //   std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+  //   return false;
+  // }
 
-  cudaError_t allocStatus = cudaGetLastError();
-  if (allocStatus != cudaSuccess) {
-    std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
-  } else {
-    std::cout << "Device memory for curand allocated successfully." << std::endl;
-  }
+  // err = cudaDeviceSynchronize();
+  // // Allocate the query
+
+  // cudaError_t allocStatus = cudaGetLastError();
+  // if (allocStatus != cudaSuccess) {
+  //   std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
+  // } else {
+  //   std::cout << "Device memory for curand allocated successfully." << std::endl;
+  // }
 
   auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn);
 
@@ -119,18 +124,18 @@ bool AtlerProbabilityEstimation::runCuda() {
   // VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threads>>>(
   //     stapn, ciMarking, cudaSMCQuery, runres, smcSettings.timeBound, smcSettings.stepBound, 0, runsNeeded);
 
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
-    return false;
-  }
+  // cudaError_t err = cudaGetLastError();
+  // if (err != cudaSuccess) {
+  //   std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+  //   return false;
+  // }
 
-  err = cudaDeviceSynchronize();
+  // err = cudaDeviceSynchronize();
 
-  if (err != cudaSuccess) {
-    std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
-    return false;
-  }
+  // if (err != cudaSuccess) {
+  //   std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
+  //   return false;
+  // }
 
   std::cout << "Kernel execution completed successfully." << std::endl;
 

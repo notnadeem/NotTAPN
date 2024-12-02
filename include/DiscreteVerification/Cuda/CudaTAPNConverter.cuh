@@ -224,6 +224,7 @@ public:
     auto placeLength = marking.getPlaceList().size();
     srm.places = new CudaRealPlace*[placeLength];
     for (size_t i = 0; i < placeLength; i++) {
+      srm.places[i] = new CudaRealPlace();
       DiscreteVerification::RealPlace &realPlace = marking.getPlaceList()[i];
 
       // Get mapped place
