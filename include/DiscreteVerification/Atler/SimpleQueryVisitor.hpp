@@ -71,7 +71,6 @@ private:
 };
 
 void SimpleQueryVisitor::visit(NotExpression &expr, AST::Result &context) {
-  std::cout << "Not expression called" << std::endl;
   BoolResult c;
   expr.getChild().accept(*this, c);
   expr.eval = !c.value;
@@ -79,7 +78,6 @@ void SimpleQueryVisitor::visit(NotExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(OrExpression &expr, AST::Result &context) {
-  std::cout << "Or expression called" << std::endl;
   BoolResult left, right;
   expr.getLeft().accept(*this, left);
   // use lazy evaluation
@@ -93,7 +91,6 @@ void SimpleQueryVisitor::visit(OrExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(AndExpression &expr, AST::Result &context) {
-  std::cout << "And expression called" << std::endl;
   BoolResult left, right;
   expr.getLeft().accept(*this, left);
 
@@ -108,7 +105,6 @@ void SimpleQueryVisitor::visit(AndExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(AtomicProposition &expr, AST::Result &context) {
-  std::cout << "Atomic proposition called" << std::endl;
   IntResult left;
   expr.getLeft().accept(*this, left);
   IntResult right;
@@ -120,26 +116,22 @@ void SimpleQueryVisitor::visit(AtomicProposition &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(BoolExpression &expr, AST::Result &context) {
-  std::cout << "Bool expression called" << std::endl;
   static_cast<BoolResult &>(context).value = expr.getValue();
   expr.eval = expr.getValue();
 }
 
 void SimpleQueryVisitor::visit(NumberExpression &expr, AST::Result &context) {
-  std::cout << "Number expression called" << std::endl;
   ((IntResult &)context).value = expr.getValue();
   expr.eval = static_cast<IntResult &>(context).value;
 }
 
 void SimpleQueryVisitor::visit(IdentifierExpression &expr,
                                AST::Result &context) {
-  std::cout << "Identifier expression called" << std::endl;
   ((IntResult &)context).value = marking.numberOfTokensInPlace(expr.getPlace());
   expr.eval = static_cast<IntResult &>(context).value;
 }
 
 void SimpleQueryVisitor::visit(MultiplyExpression &expr, AST::Result &context) {
-  std::cout << "Multiply expression called" << std::endl;
   IntResult left;
   expr.getLeft().accept(*this, left);
   IntResult right;
@@ -149,7 +141,6 @@ void SimpleQueryVisitor::visit(MultiplyExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(MinusExpression &expr, AST::Result &context) {
-  std::cout << "Minus expression called" << std::endl;
   IntResult value;
   expr.getValue().accept(*this, value);
   ((IntResult &)context).value = -value.value;
@@ -157,7 +148,6 @@ void SimpleQueryVisitor::visit(MinusExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(SubtractExpression &expr, AST::Result &context) {
-  std::cout << "Subtract expression called" << std::endl;
   IntResult left;
   expr.getLeft().accept(*this, left);
   IntResult right;
@@ -167,7 +157,6 @@ void SimpleQueryVisitor::visit(SubtractExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(PlusExpression &expr, AST::Result &context) {
-  std::cout << "Plus expression called" << std::endl;
   IntResult left;
   expr.getLeft().accept(*this, left);
   IntResult right;
@@ -177,7 +166,6 @@ void SimpleQueryVisitor::visit(PlusExpression &expr, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(SimpleQuery &query, AST::Result &context) {
-  std::cout << "Simple query called" << std::endl;
   query.getChild()->accept(*this, context);
   if (query.getQuantifier() == AG || query.getQuantifier() == AF ||
       query.getQuantifier() == PG) {
@@ -188,7 +176,6 @@ void SimpleQueryVisitor::visit(SimpleQuery &query, AST::Result &context) {
 }
 
 void SimpleQueryVisitor::visit(DeadlockExpression &expr, AST::Result &context) {
-  std::cout << "Deadlock expression called" << std::endl;
   if (!deadlockChecked) {
     deadlockChecked = true;
     deadlocked = marking.canDeadlock(tapn, maxDelay);

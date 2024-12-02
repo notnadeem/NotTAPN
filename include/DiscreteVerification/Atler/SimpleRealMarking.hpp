@@ -25,6 +25,14 @@ struct SimpleRealPlace {
 
   SimpleRealPlace() { tokens = new SimpleDynamicArray<SimpleRealToken *>(10); }
 
+  // SimpleRealPlace(const SimpleRealPlace &other) {
+  //   place = other.place;
+  //   tokens = new SimpleDynamicArray<SimpleRealToken *>(other.tokens->size);
+  //   for (size_t i = 0; i < other.tokens->size; i++) {
+  //     tokens->add(new SimpleRealToken(*other.tokens->get(i)));
+  //   }
+  // }
+
   SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength) : place(place) {
     tokens = new SimpleDynamicArray<SimpleRealToken *>(tokensLength);
   }
@@ -32,14 +40,12 @@ struct SimpleRealPlace {
   // TODO: check if this works
   inline void deltaAge(double x) {
     // print all the places
-    std::cout << "place name: " << place.name << std::endl;
-    std::cout << "deltaAge: " << x << std::endl;
     for (size_t i = 0; i < tokens->size; i++) {
       tokens->get(i)->deltaAge(x);
     }
   }
 
-  inline void addToken(SimpleRealToken& newToken) {
+  inline void addToken(SimpleRealToken &newToken) {
     size_t index = 0;
     for (size_t i = 0; i < tokens->size; i++) {
       SimpleRealToken *token = tokens->get(i);
@@ -100,6 +106,18 @@ struct SimpleRealMarking {
     places = other.places;
     deadlocked = other.deadlocked;
   }
+
+  // SimpleRealMarking(const SimpleRealMarking &other) {
+  //   placesLength = other.placesLength;
+  //   deadlocked = other.deadlocked;
+  //   places = new SimpleRealPlace[other.placesLength];
+  //   for (size_t i = 0; i < other.placesLength; i++) {
+  //       places[i] = SimpleRealPlace(other.places[i].place, other.places[i].tokens->size);
+  //       for(size_t j = 0 ; j < other.places[i].tokens->size ; j++) {
+  //           places[i].tokens->add(new SimpleRealToken{other.places[i].tokens->get(j)->age, other.places[i].tokens->get(j)->count});
+  //       }
+  //   }
+  // }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {

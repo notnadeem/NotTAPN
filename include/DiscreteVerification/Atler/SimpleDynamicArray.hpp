@@ -21,6 +21,10 @@ template <typename T> struct SimpleDynamicArray {
     arr = new T[capacity];
   }
 
+  // ~SimpleDynamicArray() {
+  //   delete[] arr;
+  // }
+
   void resize() {
     capacity *= 2;
     T *temp = new T[capacity];
@@ -55,7 +59,6 @@ template <typename T> struct SimpleDynamicArray {
   }
 
   void insert2(size_t index, T value) {
-    std::cout << "insert2" << std::endl;
     if (index > size) { // Allow inserting at the end
       throw std::out_of_range("Index out of bounds: insert operation");
     }

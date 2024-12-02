@@ -85,15 +85,15 @@ struct AtlerRunResult {
     }
 
     // print default transition intervals
-    for (size_t i = 0; i < tapn.transitionsLength; i++) {
-      std::cout << "Default intervals for transition "
-                << tapn.transitions[i]->name << std::endl;
-      for (size_t j = 0; j < defaultTransitionIntervals.get(i).size; j++) {
-        std::cout << "(" << defaultTransitionIntervals.get(i).get(j).lower()
-                  << ", " << defaultTransitionIntervals.get(i).get(j).upper()
-                  << ")" << std::endl;
-      }
-    }
+    // for (size_t i = 0; i < tapn.transitionsLength; i++) {
+    //   std::cout << "Default intervals for transition "
+    //             << tapn.transitions[i]->name << std::endl;
+    //   for (size_t j = 0; j < defaultTransitionIntervals.get(i).size; j++) {
+    //     std::cout << "(" << defaultTransitionIntervals.get(i).get(j).lower()
+    //               << ", " << defaultTransitionIntervals.get(i).get(j).upper()
+    //               << ")" << std::endl;
+    //   }
+    // }
     reset();
   }
 
@@ -177,7 +177,7 @@ struct AtlerRunResult {
 
     if (delay == std::numeric_limits<double>::infinity()) {
       // print delay is infinity
-      std::cout << "Delay is infinity/Deadlocked" << std::endl;
+      // std::cout << "Delay is infinity/Deadlocked" << std::endl;
       maximal = true;
       return nullptr;
     }
@@ -188,34 +188,23 @@ struct AtlerRunResult {
     parent->fromDelay = delay + parent->fromDelay;
 
     if (winner != nullptr) {
-      std::cout << "Winner: " << winner->name << std::endl;
+      // std::cout << "Winner: " << winner->name << std::endl;
+      // print winnning delay
+      // std::cout << "Delay: " << delay << std::endl;
       totalSteps++;
       dates_sampled->set(winner->index,
                          std::numeric_limits<double>::infinity());
       auto child = fire(winner);
-      // print new marking state
-      std::cout << "Child marking state" << std::endl;
-      std::cout << "Child place tokens length: " << child->placesLength
-                << std::endl;
-      for (size_t i = 0; i < child->placesLength; i++) {
-        std::cout << "Child place tokens length: "
-                  << child->places[i].tokens->size << std::endl;
-        for (size_t j = 0; j < child->places[i].tokens->size; j++) {
-          auto token = child->places[i].tokens->get(j);
-          std::cout << "Token age: " << token->age << std::endl;
-          std::cout << "Token count: " << token->count << std::endl;
-        }
-      }
 
       child->generatedBy = winner;
       delete parent;
-      // state of the child after parent is deleted
       std::cout << "Child marking state" << std::endl;
       std::cout << "Child place tokens length: " << child->placesLength
                 << std::endl;
       for (size_t i = 0; i < child->placesLength; i++) {
-        std::cout << "Child place tokens length: "
-                  << child->places[i].tokens->size << std::endl;
+        std::cout << "Place " << child->places[i].place.name
+                  << " tokens length: " << child->places[i].tokens->size
+                  << std::endl;
         for (size_t j = 0; j < child->places[i].tokens->size; j++) {
           auto token = child->places[i].tokens->get(j);
           std::cout << "Token age: " << token->age << std::endl;
@@ -230,11 +219,6 @@ struct AtlerRunResult {
       double newVal = (date == std::numeric_limits<double>::infinity())
                           ? std::numeric_limits<double>::infinity()
                           : date - delay;
-      // print any date that is not infinity
-      if (date != std::numeric_limits<double>::infinity()) {
-        std::cout << "date: " << date << std::endl;
-        std::cout << "newVal: " << newVal << std::endl;
-      }
       dates_sampled->set(i, newVal);
     }
 
@@ -245,38 +229,27 @@ struct AtlerRunResult {
   std::pair<SimpleTimedTransition *, double> getWinnerTransitionAndDelay() {
     SimpleDynamicArray<size_t> winner_indexes(10);
     double date_min = std::numeric_limits<double>::infinity();
-    // print transition intervals length
-    std::cout << "Transition intervals length: " << transitionIntervals.size
-              << std::endl;
 
     for (size_t i = 0; i < transitionIntervals.size; i++) {
       auto intervals = transitionIntervals.get(i);
-      std::cout << "Intervals length: " << intervals.size << std::endl;
       if (intervals.empty())
         continue;
       double date = std::numeric_limits<double>::infinity();
       for (size_t j = 0; j < intervals.size; j++) {
         // print the word before
-        std::cout << "Before " << j << ": ";
         auto interval = intervals.get(j);
-        std::cout << "After " << j << ": ";
         // print after
         if (interval.lower() > 0) {
           date = interval.lower();
           break;
         }
-        if (interval.upper() > date) {
+        if (interval.upper() > 0) {
           date = interval.upper();
           break;
         }
       }
-      std::cout << "Date: " << date << std::endl;
-      // print length of dates sampled
-      std::cout << "Dates sampled length: " << (*dates_sampled).size
-                << std::endl;
       date = std::min(dates_sampled->get(i), date);
       if (date < date_min) {
-        std::cout << "New minimum date: " << date << std::endl;
         date_min = date;
         winner_indexes.clear();
       }
@@ -289,10 +262,8 @@ struct AtlerRunResult {
       winner = nullptr;
     } else if (winner_indexes.size == 1) {
       winner = tapn.transitions[winner_indexes.get(0)];
-      std::cout << "Winner indexes size: " << std::endl;
     } else {
       winner = chooseWeightedWinner(winner_indexes);
-      std::cout << "Winner indexes size: " << std::endl;
     }
     return std::make_pair(winner, date_min);
   }
@@ -344,15 +315,13 @@ struct AtlerRunResult {
 
     // for each inhibitor arc
     for (size_t i = 0; i < transition.inhibitorArcsLength; i++) {
-      std::cout << "Inhibitor arc length: " << transition.inhibitorArcsLength
-                << std::endl;
-      std::cout << "Preset arc length: " << transition.presetLength
-                << std::endl;
+      // std::cout << "Inhibitor arc length: " << transition.inhibitorArcsLength
+      //           << std::endl;
+      // std::cout << "Preset arc length: " << transition.presetLength
+      //           << std::endl;
       auto inhib = transition.inhibitorArcs[i];
-      std::cout << "Inhibitor arc 2" << std::endl;
       if (parent->numberOfTokensInPlace(inhib->inputPlace.index) >=
           inhib->weight) {
-        std::cout << "Inhibitor arc 3" << std::endl;
         return disabled;
       }
     }
@@ -361,14 +330,13 @@ struct AtlerRunResult {
       auto arc = transition.preset[i];
       SimpleRealPlace &place = parent->places[arc->inputPlace.index];
 
-      std::cout << "Preset arc" << std::endl;
-      std::cout << "place name: " << place.place.name << std::endl;
-      std::cout << "place size: " << place.tokens->size << std::endl;
-      std::cout << "place capacity: " << place.tokens->capacity << std::endl;
+      // std::cout << "Preset arc" << std::endl;
+      // std::cout << "place name: " << place.place.name << std::endl;
+      // std::cout << "place size: " << place.tokens->size << std::endl;
+      // std::cout << "place capacity: " << place.tokens->capacity << std::endl;
       if (place.isEmpty()) {
         return disabled;
       }
-      std::cout << "Preset arc 2" << std::endl;
       firingIntervals = Util::setIntersection(
           firingIntervals,
           arcFiringDates(arc->interval, arc->weight, *place.tokens));
@@ -377,14 +345,14 @@ struct AtlerRunResult {
     }
 
     for (size_t i = 0; i < transition.transportArcsLength; i++) {
-      std::cout << "Transport arc" << std::endl;
-      auto transport = transition.transportArcs[i];
+      // std::cout << "Transport arc" << std::endl;
+      SimpleTimedTransportArc *transport = transition.transportArcs[i];
       auto place = parent->places[transport->source.index];
 
-      std::cout << "Preset arc" << std::endl;
-      std::cout << "place name: " << place.place.name << std::endl;
-      std::cout << "place size: " << place.tokens->size << std::endl;
-      std::cout << "place capacity: " << place.tokens->capacity << std::endl;
+      // std::cout << "Preset arc" << std::endl;
+      // std::cout << "place name: " << place.place.name << std::endl;
+      // std::cout << "place size: " << place.tokens->size << std::endl;
+      // std::cout << "place capacity: " << place.tokens->capacity << std::endl;
 
       if (place.isEmpty())
         return disabled;
@@ -402,7 +370,6 @@ struct AtlerRunResult {
       if (firingIntervals.empty())
         return firingIntervals;
     }
-    std::cout << "Firing in the hole" << std::endl;
 
     return firingIntervals;
   }
@@ -411,34 +378,27 @@ struct AtlerRunResult {
   arcFiringDates(SimpleTimeInterval time_interval, uint32_t weight,
                  SimpleDynamicArray<SimpleRealToken *> &tokens) {
 
-    std::cout << "Arc firing dates" << std::endl;
+    // std::cout << "Arc firing dates" << std::endl;
     Util::SimpleInterval arcInterval(time_interval.lowerBound,
                                      time_interval.upperBound);
     size_t total_tokens = 0;
-    std::cout << "tokens size: " << tokens.size << std::endl;
+    // std::cout << "tokens size: " << tokens.size << std::endl;
     for (size_t i = 0; i < tokens.size; i++) {
       total_tokens += tokens.get(i)->count;
     }
-    std::cout << "Arc firing dates" << std::endl;
+    // std::cout << "Arc firing dates" << std::endl;
     if (total_tokens < weight)
       return SimpleDynamicArray<Util::SimpleInterval>();
 
     SimpleDynamicArray<Util::SimpleInterval> firingIntervals(10);
     SimpleDeque<double> selected = SimpleDeque<double>();
     for (size_t i = 0; i < tokens.size; i++) {
-      // print the counts from all the tokens
-      // print size of tokens
-      std::cout << "Tokens z size: " << tokens.size << std::endl;
-      std::cout << "Tokens get z count: " << tokens.get(i)->count << std::endl;
-      std::cout << "Current i value: " << i << std::endl;
-    }
-    for (size_t i = 0; i < tokens.size; i++) {
       for (int j = 0; j < tokens.get(i)->count; j++) {
         // print tokens get i count
-        std::cout << "Tokens get i count: " << tokens.get(i)->count
-                  << std::endl;
-        std::cout << "Tokens get i age: " << tokens.get(i)->age << std::endl;
-        std::cout << "Before push_back" << std::endl;
+        // std::cout << "Tokens get i count: " << tokens.get(i)->count
+        //           << std::endl;
+        // std::cout << "Tokens get i age: " << tokens.get(i)->age << std::endl;
+        // std::cout << "Before push_back" << std::endl;
         selected.push_back(tokens.get(i)->age);
         if (selected.size > weight) {
           selected.pop_front();
@@ -459,9 +419,9 @@ struct AtlerRunResult {
   }
 
   SimpleDynamicArray<SimpleRealToken *>
-  removeRandom(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+  removeRandom(SimpleDynamicArray<SimpleRealToken *>& tokenList,
                const SimpleTimeInterval &interval, const int weight) {
-    std::cout << "Remove random method is being called" << std::endl;
+    // std::cout << "Remove random method is being called" << std::endl;
     auto res = SimpleDynamicArray<SimpleRealToken *>(tokenList.size);
     int remaning = weight;
     std::uniform_int_distribution<> randomTokenIndex(0, tokenList.size - 1);
@@ -493,42 +453,57 @@ struct AtlerRunResult {
   }
 
   SimpleDynamicArray<SimpleRealToken *>
-  removeYoungest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+  removeYoungest(SimpleDynamicArray<SimpleRealToken *>& tokenList,
                  const SimpleTimeInterval &interval, const int weight) {
-    std::cout << "Remove youngest method is being called" << std::endl;
+    // std::cout << "Remove youngest method is being called" << std::endl;
 
     auto res = SimpleDynamicArray<SimpleRealToken *>();
     int remaining = weight;
+    // print initial remaining
+    // std::cout << "Initial remaining: " << remaining << std::endl;
+    // print token list size
+    // std::cout << "Token list size: " << tokenList.size << std::endl;
     for (size_t i = 0; i < tokenList.size; i++) {
       auto token = tokenList.get(i);
       double age = token->age;
       if (!interval.contains(age)) {
+        // print interval
+        // std::cout << "Interval: " << interval.lowerBound << ", " <<
+        // interval.upperBound << std::endl; print !interval.contains(age)
+        // std::cout << "!interval.contains(age): " << !interval.contains(age)
+        // << std::endl; print age std::cout << "Age: " << age << std::endl;
         continue;
       }
       int count = token->count;
+      // std::cout << "Count: " << count << std::endl;
       if (count >= remaining) {
-        res.add(new SimpleRealToken{.age = age, .count = count});
+        // std::cout << "Count is greater or equal to remaining" << std::endl;
+        res.add(new SimpleRealToken{.age = age, .count= count});
         token->remove(remaining);
         if (token->count == 0)
           tokenList.remove(i);
         remaining = 0;
         break;
       } else {
-        res.add(new SimpleRealToken{.age = age, .count = count});
+        // std::cout << "Count is less than remaining" << std::endl;
+        res.add(new SimpleRealToken{.age = age, .count= count});
         remaining -= count;
         tokenList.remove(i);
       }
     }
 
+    // print remaining
+    //  std::cout << "Remaining: " << remaining << std::endl;
     assert(remaining == 0);
     return res;
   }
 
   // NOTE: Double check this method to ensure it is correct
   SimpleDynamicArray<SimpleRealToken *>
-  removeOldest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
+  removeOldest(SimpleDynamicArray<SimpleRealToken *>& tokenList,
                const SimpleTimeInterval &timeInterval, const int weight) {
 
+    // std::cout << "Remove oldest method is being called" << std::endl;
     auto res = SimpleDynamicArray<SimpleRealToken *>();
     int remaining = weight;
     // for loop in reverse order
@@ -540,14 +515,14 @@ struct AtlerRunResult {
       }
       int count = token->count;
       if (count >= remaining) {
-        res.add(new SimpleRealToken{.age = age, .count = count});
+        res.add(new SimpleRealToken{.age = age, .count= count});
         token->remove(remaining);
         if (token->count == 0)
           tokenList.remove(i);
         remaining = 0;
         break;
       } else {
-        res.add(new SimpleRealToken{.age = age, .count = count});
+        res.add(new SimpleRealToken{.age = age, .count= count});
         remaining -= count;
         tokenList.remove(i);
       }
@@ -577,56 +552,60 @@ struct AtlerRunResult {
         removeOldest(*tokenList, input->interval, input->weight);
         break;
       case SimpleSMC::FiringMode::Youngest:
+        // std::cout << "Preset youngest was called" << std::endl;
         removeYoungest(*tokenList, input->interval, input->weight);
         break;
       default:
         removeOldest(*tokenList, input->interval, input->weight);
         break;
       }
+    }
 
-      auto toCreate =
-          SimpleDynamicArray<std::pair<SimpleTimedPlace *, SimpleRealToken *>>(
-              10);
-      for (size_t i = 0; i < transition->transportArcsLength; i++) {
-        auto transport = transition->transportArcs[i];
-        int destInv = transport->destination.timeInvariant.bound;
-        SimpleRealPlace place = placeList[transport->source.index];
-        SimpleDynamicArray<SimpleRealToken *> *tokenList = place.tokens;
-        SimpleDynamicArray<SimpleRealToken *> consumed(10);
-        SimpleTimeInterval &arcInterval = transport->interval;
-        if (destInv < arcInterval.upperBound)
-          arcInterval.setUpperBound(destInv, false);
-        switch (transition->_firingMode) {
-        case SimpleSMC::FiringMode::Random:
-          consumed = removeRandom(*tokenList, arcInterval, transport->weight);
-          break;
-        case SimpleSMC::FiringMode::Oldest:
-          consumed = removeOldest(*tokenList, arcInterval, transport->weight);
-          break;
-        case SimpleSMC::FiringMode::Youngest:
-          consumed = removeYoungest(*tokenList, arcInterval, transport->weight);
-          break;
-        default:
-          consumed = removeOldest(*tokenList, arcInterval, transport->weight);
-          break;
-        }
-        for (size_t j = 0; j < consumed.size; j++) {
-          toCreate.add(
-              std::make_pair(&(transport->destination), consumed.get(j)));
-        }
+    auto toCreate =
+        SimpleDynamicArray<std::pair<SimpleTimedPlace *, SimpleRealToken *>>(
+            10);
+    for (size_t i = 0; i < transition->transportArcsLength; i++) {
+      auto transport = transition->transportArcs[i];
+      int destInv = transport->destination.timeInvariant.bound;
+      SimpleRealPlace place = placeList[transport->source.index];
+      SimpleDynamicArray<SimpleRealToken *> * tokenList = place.tokens;
+      SimpleDynamicArray<SimpleRealToken *> consumed(10);
+      SimpleTimeInterval &arcInterval = transport->interval;
+      if (destInv < arcInterval.upperBound)
+        arcInterval.setUpperBound(destInv, false);
+      switch (transition->_firingMode) {
+      case SimpleSMC::FiringMode::Random:
+        consumed = removeRandom(*tokenList, arcInterval, transport->weight);
+        break;
+      case SimpleSMC::FiringMode::Oldest:
+        consumed = removeOldest(*tokenList, arcInterval, transport->weight);
+        break;
+      case SimpleSMC::FiringMode::Youngest:
+        // std::cout << "Transport youngest was called" << std::endl;
+        consumed = removeYoungest(*tokenList, arcInterval, transport->weight);
+        break;
+      default:
+        consumed = removeOldest(*tokenList, arcInterval, transport->weight);
+        break;
       }
+      // print consumed
+      // std::cout << "Consumed size: " << consumed.size << std::endl;
+      // std::cout << "Consumed capacity: " << consumed.capacity << std::endl;
+      for (size_t j = 0; j < consumed.size; j++) {
+        toCreate.add(
+            std::make_pair(&(transport->destination), consumed.get(j)));
+      }
+    }
 
-      for (size_t i = 0; i < transition->postsetLength; i++) {
-        SimpleTimedPlace *place = transition->postset[i]->outputPlace;
-        SimpleTimedOutputArc *post = transition->postset[i];
-        auto token = new SimpleRealToken{
-            .age = 0.0, .count = static_cast<int>(post->weight)};
-        child->addTokenInPlace(*place, *token);
-      }
-      for (size_t i = 0; i < toCreate.size; i++) {
-        auto [place, token] = toCreate.get(i);
-        child->addTokenInPlace(*place, *token);
-      }
+    for (size_t i = 0; i < transition->postsetLength; i++) {
+      SimpleTimedPlace *place = transition->postset[i]->outputPlace;
+      SimpleTimedOutputArc *post = transition->postset[i];
+      auto token = new SimpleRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
+      child->addTokenInPlace(*place, *token);
+    }
+    for (size_t i = 0; i < toCreate.size; i++) {
+      auto [place, token] = toCreate.get(i);
+      child->addTokenInPlace(*place, *token);
     }
     return child;
   }

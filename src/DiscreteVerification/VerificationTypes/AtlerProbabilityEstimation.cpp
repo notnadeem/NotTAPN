@@ -49,15 +49,10 @@ bool AtlerProbabilityEstimation::run() {
   Atler::SimpleVerificationOptions simpleOptions =
       Atler::SimpleOptionsConverter::convert(options);
 
-  // TODO: Convert the PlaceVisitor to a simple representation
-  // NOTE: Also find a way to simplify the representation of the PlaceVisitor
-
   // Simulate prepare func
   // setup the run generator
 
-  std::cout << "Creating run generator..." << std::endl;
   auto runres = Atler::AtlerRunResult(stapn);
-  std::cout << "Run prepare" << std::endl;
   // runres.prepare(siMarking);
 
   // auto clones =
@@ -66,9 +61,22 @@ bool AtlerProbabilityEstimation::run() {
   //   clones->add(runres.copy());
   // }
 
+  // print all the token in siMarking
+  std::cout << "SIMarking:" << std::endl;
+  for (size_t i = 0; i < siMarking.placesLength; i++) {
+    std::cout << "Place " << i << ": ";
+    for (size_t j = 0; j < siMarking.places[i].tokens->size; j++) {
+      auto token = siMarking.places[i].tokens->get(j);
+      std::cout << "(" << siMarking.places[i].place.name << ","
+                << token->age << ") ";
+    }
+    std::cout << std::endl;
+  }
+
+
   int count = 0;
   int success = 0;
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < runsNeeded; i++) {
     auto runner = new Atler::AtlerRunResult(stapn);
     runner->prepare(&siMarking);
     // Atler::AtlerRunResult *runner = clones->get(i);
@@ -77,56 +85,47 @@ bool AtlerProbabilityEstimation::run() {
     Atler::SimpleRealMarking *newMarking = runner->parent;
     while (!runner->maximal && !(reachedRunBound(runner))) {
       // print value of maximal
-      std::cout << "Max: " << runner->maximal << std::endl;
-
-      Atler::SimpleRealMarking *child = new Atler::SimpleRealMarking(*newMarking);
+      auto *child = new Atler::SimpleRealMarking(*newMarking);
       Atler::SimpleQueryVisitor checker(*child, stapn);
       Atler::AST::BoolResult result;
 
       simpleSMCQuery->accept(checker, result);
       runRes = result.value;
-
-      if (runRes) {
-        std::cout << "Success" << runRes << std::endl;
-        success++;
-        if (simpleSMCQuery->getQuantifier() != Atler::PG) {
+      if (runRes)
+      {
+          success++;
           break;
-        }
       }
-
       newMarking = runner->next();
-
-      // print number of tokens in places
-      if (runner && newMarking) {
-        std::cout << "New marking state" << std::endl;
-        std::cout << "New place tokens length: " << newMarking->placesLength
-                  << std::endl;
-        for (size_t i = 0; i < newMarking->placesLength; i++) {
-          std::cout << "New place tokens length: "
-                    << newMarking->places[i].tokens->size << std::endl;
-          for (size_t j = 0; j < newMarking->places[i].tokens->size; j++) {
-            auto token = newMarking->places[i].tokens->get(j);
-            std::cout << "Token age: " << token->age << std::endl;
-            std::cout << "Token count: " << token->count << std::endl;
-          }
+      // print the marking state for tokens
+      std::cout << "New marking state" << std::endl;
+      for (size_t i = 0; i < newMarking->placesLength; i++) {
+        std::cout << "New place tokens length ("
+                  << newMarking->places[i].place.name
+                  << "): " << newMarking->places[i].tokens->size << std::endl;
+        for (size_t j = 0; j < newMarking->places[i].tokens->size; j++) {
+          auto token = newMarking->places[i].tokens->get(j);
+          std::cout << "\tToken age: " << token->age << std::endl;
+          std::cout << "\tToken count: " << token->count << std::endl;
         }
-
-        std::cout << "Checking: " << ++count << "/" << runsNeeded << std::endl;
-        std::cout << "Time bound: " << smcSettings.timeBound << std::endl;
-        std::cout << "Steps bound: " << smcSettings.stepBound << std::endl;
-        std::cout << "Total time: " << runner->totalTime << std::endl;
-        std::cout << "Total steps: " << runner->totalSteps << std::endl;
-        std::cout << "After Max: " << runner->maximal << std::endl;
       }
     }
-    std::cout << "Number of runs: " << count << std::endl;
-    std::cout << "Success: " << success << std::endl;
-
-    // print the default transition intervals
-    for (size_t i = 0; i < runner->defaultTransitionIntervals.size; i++) {
-      runner->defaultTransitionIntervals.get(i);
+    count++;
+    if (simpleSMCQuery->getQuantifier() == Atler::PG) {
+      std::cout << "Number of runs: " << count << std::endl;
+      std::cout << "Failed runs: " << success << std::endl;
     }
 
+    std::cout << "SIMarking:" << std::endl;
+    for (size_t i = 0; i < siMarking.placesLength; i++) {
+      std::cout << "Place " << i << ": ";
+      for (size_t j = 0; j < siMarking.places[i].tokens->size; j++) {
+        auto token = siMarking.places[i].tokens->get(j);
+        std::cout << "(" << siMarking.places[i].place.name << ","
+                  << token->age << ") ";
+      }
+      std::cout << std::endl;
+    }
   }
 
   // Create clones of the run generator

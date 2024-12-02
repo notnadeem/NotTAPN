@@ -241,7 +241,7 @@ public:
           //print token count
           std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
         srm.places[i].tokens->add(new SimpleRealToken{
-            realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
+            realPlace.tokens[j].getAge(),realPlace.tokens[j].getCount()});
       }
 
       // Set SimpleRealPlace fields
