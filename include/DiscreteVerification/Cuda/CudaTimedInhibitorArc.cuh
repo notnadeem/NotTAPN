@@ -11,8 +11,8 @@ namespace Cuda {
 
 
 struct CudaTimedInhibitorArc {
-  CudaTimedPlace &inputPlace;
-  CudaTimedTransition &outputTransition;
+  CudaTimedPlace *inputPlace;
+  CudaTimedTransition *outputTransition;
   uint32_t weight;
 
   /*SimpleTimedInhibitorArc(const TAPN::InhibitorArc &inhibitorArc) {*/

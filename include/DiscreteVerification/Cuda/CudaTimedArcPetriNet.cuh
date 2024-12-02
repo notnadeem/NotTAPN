@@ -13,7 +13,7 @@ namespace VerifyTAPN {
 namespace Cuda {
 
 struct CudaTimedArcPetriNet {
-  CudaTimedPlace *places;
+  CudaTimedPlace **places;
   size_t placesLength;
   CudaTimedTransition **transitions;
   size_t transitionsLength;

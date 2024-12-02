@@ -11,8 +11,8 @@ namespace VerifyTAPN {
 namespace Cuda {
 
 struct CudaTimedOutputArc {
-  CudaTimedTransition &inputTransition;
-  CudaTimedPlace &outputPlace;
+  CudaTimedTransition *inputTransition;
+  CudaTimedPlace *outputPlace;
   const uint32_t weight;
 };
 
