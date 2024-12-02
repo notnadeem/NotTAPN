@@ -9,7 +9,14 @@ namespace VerifyTAPN::Alloc {
 using namespace Cuda;
 
 struct RealMarkingAllocator {
-  __host__ static CudaRealMarking *allocate(CudaRealMarking *realMarkingHost) {};
+  __host__ static CudaRealMarking *
+  allocate(CudaRealMarking *h_real_marking,
+           std::unordered_map<CudaTimedTransition *, CudaTimedTransition *> transition_map,
+           std::unordered_map<CudaTimedPlace *, CudaTimedPlace *> place_map) {};
+
+  __host__ static CudaRealPlace **
+  cuda_allocate_places_for_marking(CudaRealMarking *h_marking,
+                                   std::unordered_map<CudaTimedPlace *, CudaTimedPlace *> place_map) {};
 
 private:
   __host__ static void allocatePointerMembers(CudaRealMarking *realMarkingHost) {};

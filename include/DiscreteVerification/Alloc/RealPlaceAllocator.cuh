@@ -9,7 +9,7 @@ namespace VerifyTAPN::Alloc {
 using namespace Cuda;
 
 struct RealPlaceAllocator {
-  __host__ static CudaRealPlace *allocate(CudaRealPlace *realPlaceHost, CudaTimedPlace placeHost) {};
+  __host__ static CudaRealPlace **allocate(CudaRealPlace *realPlaceHost, CudaTimedPlace placeHost) {};
 
 private:
   __host__ static void allocatePointerMembers(CudaRealPlace *realPlaceHost) {};

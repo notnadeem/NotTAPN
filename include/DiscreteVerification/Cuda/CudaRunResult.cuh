@@ -332,18 +332,18 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      CudaRealPlace place = parent->places[arc->inputPlace->index];
+      CudaRealPlace* place = parent->places[arc->inputPlace->index];
 
       printf("Preset arc\n");
-      printf("place name: %s\n", place.place.name);
-      printf("place size: %d\n", place.tokens->size);
-      printf("place capacity: %d\n", place.tokens->capacity);
-      if (place.isEmpty()) {
+      printf("place name: %s\n", place->place->name);
+      printf("place size: %d\n", place->tokens->size);
+      printf("place capacity: %d\n", place->tokens->capacity);
+      if (place->isEmpty()) {
         return disabled;
       }
       printf("Preset arc 2\n");
       firingIntervals =
-          Util::setIntersection(firingIntervals, arcFiringDates(arc->interval, arc->weight, *place.tokens));
+          Util::setIntersection(firingIntervals, arcFiringDates(arc->interval, arc->weight, *place->tokens));
       if (firingIntervals.empty()) return firingIntervals;
     }
 
@@ -351,7 +351,7 @@ struct CudaRunResult {
       printf("Transport arc\n");
       auto transport = transition.transportArcs[i];
       auto &place = parent->places[transport->source->index];
-      if (place.isEmpty()) return disabled;
+      if (place->isEmpty()) return disabled;
 
       Atler::SimpleTimeInvariant targetInvariant = transport->destination->timeInvariant;
       CudaTimeInterval arcInterval = transport->interval;
@@ -359,7 +359,7 @@ struct CudaRunResult {
         arcInterval.setUpperBound(targetInvariant.bound, targetInvariant.isBoundStrict);
       }
       firingIntervals =
-          Util::setIntersection(firingIntervals, arcFiringDates(arcInterval, transport->weight, *place.tokens));
+          Util::setIntersection(firingIntervals, arcFiringDates(arcInterval, transport->weight, *place->tokens));
       if (firingIntervals.empty()) return firingIntervals;
     }
     printf("Firing in the hole\n");
@@ -511,7 +511,7 @@ struct CudaRunResult {
     }
 
     CudaRealMarking *child = parent->clone();
-    CudaRealPlace *placeList = child->places;
+    CudaRealPlace *placeList = *child->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       CudaTimedInputArc *input = transition->preset[i];

@@ -46,6 +46,27 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::Cud
   }
 }
 
+__global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet* pn){
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  
+  if(tid == 0){
+  printf("Petri net maxConstant: %s\n", pn->maxConstant);
+  printf("Petri net placesLength: %d\n", pn->placesLength);
+  for(int i = 0; i < pn->placesLength; i++){
+    printf("Place id: %d\n", pn->places[i]->id);
+    printf("Place name: %s\n", pn->places[i]->name);
+    printf("Place invariant: %s\n", pn->places[i]->timeInvariant);
+    printf("Place type: %s\n", pn->places[i]->type);
+    printf("Place containsInhibitorArcs: %s\n", pn->places[i]->containsInhibitorArcs);
+    printf("Place inputArcsLength: %d\n", pn->places[i]->inputArcsLength);
+    for(int x = 0; x < pn->places[i]->inputArcsLength; x++){
+      printf("Place inputArcs[%d]: %s\n", x, pn->places[i]->inputArcs[x]->weight);
+    }
+  }
+  printf("Kernel executed\n");
+  }
+};
+
 bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Converting TAPN and marking..." << std::endl;
   auto result = VerifyTAPN::Cuda::CudaTAPNConverter::convert(tapn, initialMarking);
@@ -77,7 +98,12 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   VerifyTAPN::Alloc::CudaPetriNetAllocator pnAllocator;
 
-  pnAllocator.cuda_allocator(&ctapn);
+  VerifyTAPN::Cuda::CudaTimedArcPetriNet* pn = pnAllocator.cuda_allocator(&ctapn);
+
+  testAllocationKernel<<<blocks, threadsPerBlock>>>(pn);
+  // Allocate the initial marking
+
+  //Allocate the query
 
   cudaError_t allocStatus = cudaGetLastError();
   if (allocStatus != cudaSuccess) {

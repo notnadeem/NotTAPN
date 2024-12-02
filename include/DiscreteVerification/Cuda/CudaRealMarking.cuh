@@ -23,18 +23,18 @@ struct CudaRealToken {
 };
 
 struct CudaRealPlace {
-  CudaTimedPlace place;
+  CudaTimedPlace *place;
   CudaDynamicArray<CudaRealToken *>* tokens;
 
   __host__ __device__ CudaRealPlace() { tokens = new CudaDynamicArray<CudaRealToken *>(10); }
 
-  __host__ __device__ CudaRealPlace(CudaTimedPlace place, size_t tokensLength) : place(place) {
+  __host__ __device__ CudaRealPlace(CudaTimedPlace *place, size_t tokensLength) : place(place) {
     tokens = new CudaDynamicArray<CudaRealToken *>(tokensLength);
   }
 
   __host__ __device__ inline void deltaAge(double x) {
     // print all the places
-    printf("place name: %s\n", place.name);
+    printf("place name: %s\n", place->name);
     printf("deltaAge: %f\n", x);
     for (size_t i = 0; i < tokens->size; i++) {
       tokens->get(i)->deltaAge(x);
@@ -79,15 +79,15 @@ struct CudaRealPlace {
   __host__ __device__ double availableDelay() const {
     if (tokens->size == 0) return HUGE_VAL;
     
-    double delay = ((double)place.timeInvariant.bound) - maxTokenAge();
+    double delay = ((double)place->timeInvariant.bound) - maxTokenAge();
     return delay <= 0.0f ? 0.0f : delay;
   }
 
   __host__ __device__ inline bool isEmpty() const { return tokens->size == 0; }
 };
-
+ 
 struct CudaRealMarking {
-  CudaRealPlace *places;
+  CudaRealPlace **places;
   size_t placesLength = 0;
 
   bool deadlocked;
@@ -96,14 +96,14 @@ struct CudaRealMarking {
   // static std::vector<SimpleRealToken> emptyTokenList;
 
   __host__ __device__ CudaRealMarking() {
-    places = new CudaRealPlace[placesLength];
+    places = new CudaRealPlace*[placesLength];
     deadlocked = false;
     generatedBy = nullptr;
     fromDelay = 0.0;
   }
 
   __host__ __device__ CudaRealMarking(size_t placesLength) : placesLength(placesLength) {
-    places = new CudaRealPlace[placesLength];
+    places = new CudaRealPlace*[placesLength];
     deadlocked = false;
     generatedBy = nullptr;
     fromDelay = 0.0;
@@ -125,18 +125,18 @@ struct CudaRealMarking {
 
   __host__ __device__ void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
-      places[i].deltaAge(x);
+      places[i]->deltaAge(x);
     }
   }
 
   __host__ __device__ CudaRealMarking *clone() const {
     CudaRealMarking *result = new CudaRealMarking();
     result->placesLength = placesLength;
-    result->places = new CudaRealPlace[placesLength];
+    result->places = new CudaRealPlace*[placesLength];
     for (size_t i = 0; i < placesLength; i++) {
-      result->places[i].place = places[i].place;
-      for (size_t j = 0; j < places[i].tokens->size; j++) {
-        result->places[i].tokens->add(places[i].tokens->get(j));
+      result->places[i]->place = places[i]->place;
+      for (size_t j = 0; j < places[i]->tokens->size; j++) {
+        result->places[i]->tokens->add(places[i]->tokens->get(j));
       }
     }
     result->deadlocked = deadlocked;
@@ -145,10 +145,10 @@ struct CudaRealMarking {
     return result;
   }
 
-  __host__ __device__ uint32_t numberOfTokensInPlace(int placeId) const { return places[placeId].totalTokenCount(); }
+  __host__ __device__ uint32_t numberOfTokensInPlace(int placeId) const { return places[placeId]->totalTokenCount(); }
 
   __host__ __device__ void addTokenInPlace(CudaTimedPlace &place, CudaRealToken &newToken) {
-    places[place.index].addToken(newToken);
+    places[place.index]->addToken(newToken);
   }
 
   __host__ __device__ bool canDeadlock(const CudaTimedArcPetriNet &tapn, int maxDelay, bool ignoreCanDelay) const {
@@ -162,8 +162,8 @@ struct CudaRealMarking {
   __host__ __device__ double availableDelay() const {
     double available = HUGE_VAL;
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].tokens->size == 0) continue;
-      double delay = places[i].availableDelay();
+      if (places[i]->tokens->size == 0) continue;
+      double delay = places[i]->availableDelay();
       if (delay < available) {
         available = delay;
       }

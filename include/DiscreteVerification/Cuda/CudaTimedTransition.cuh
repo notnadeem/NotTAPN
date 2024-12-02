@@ -16,7 +16,7 @@ struct CudaTimedInhibitorArc;
 struct CudaTimedTransition {
   int index = 0;
   const char* name;
-  int nameLength; 
+  int nameLength;
   const char* id;
   int idLength;
 
