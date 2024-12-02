@@ -1,3 +1,4 @@
+#include "DiscreteVerification/Alloc/CudaPetriNetAllocator.cuh"
 #include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/Cuda/CudaQueryVisitor.cuh"
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
@@ -61,17 +62,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   // TODO: Convert the PlaceVisitor to a simple representation
   // NOTE: Also find a way to simplify the representation of the PlaceVisitor
 
-  // Simulate prepare func
-  // setup the run generator
-
   std::cout << "Creating run generator..." << std::endl;
-
-  cudaDeviceProp deviceProp;
-  cudaError_t cudaStatus = cudaGetDeviceProperties(&deviceProp, 0); // Device 0
-  if (cudaStatus != cudaSuccess) {
-    std::cerr << "cudaGetDeviceProperties failed! CUDA Error: " << cudaGetErrorString(cudaStatus) << std::endl;
-    return false;
-  }
 
   const unsigned int threadsPerBlock = 256;
 
@@ -82,11 +73,22 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Threads per block..." << threadsPerBlock << std::endl;
   std::cout << "Blocks..." << blocks << std::endl;
 
+  // Allocate the petry net
+
+  VerifyTAPN::Alloc::CudaPetriNetAllocator pnAllocator;
+
+  pnAllocator.cuda_allocator(&ctapn);
+
+  cudaError_t allocStatus = cudaGetLastError();
+  if (allocStatus != cudaSuccess) {
+    std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
+  } else {
+    std::cout << "Device memory for curand allocated successfully." << std::endl;
+  }
+
   auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
 
   std::cout << "Run prepare" << std::endl;
-
-  // Allocate
 
   // VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threads>>>(
   //     stapn, ciMarking, cudaSMCQuery, runres, smcSettings.timeBound, smcSettings.stepBound, 0, runsNeeded);

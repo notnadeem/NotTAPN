@@ -10,6 +10,9 @@
 namespace VerifyTAPN {
 namespace Cuda {
 
+struct CudaTimedTransition;
+struct CudaTimedPlace;
+
 struct CudaTimedOutputArc {
   CudaTimedTransition *inputTransition;
   CudaTimedPlace *outputPlace;

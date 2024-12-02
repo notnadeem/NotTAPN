@@ -195,7 +195,7 @@ public:
 
     // Create and return new CudaTimedArcPetriNet
     auto cudaTapn = new CudaTimedArcPetriNet();
-    cudaTapn->places = *places;
+    cudaTapn->places = places;
     cudaTapn->placesLength = tapn.getPlaces().size();
     cudaTapn->transitions = transitions;
     cudaTapn->transitionsLength = tapn.getTransitions().size();
@@ -252,7 +252,9 @@ private:
     CudaTimedPlace cudaPlace;
     cudaPlace.index = place.getIndex();
     cudaPlace.name = place.getName().c_str();
+    cudaPlace.nameLength = place.getName().size();
     cudaPlace.id = place.getId().c_str();
+    cudaPlace.idLength = place.getId().size();
     cudaPlace.type = convertPlaceType(place.getType());
     cudaPlace.timeInvariant = convertTimeInvariant(place.getInvariant());
     cudaPlace.untimed = place.isUntimed();
@@ -267,7 +269,10 @@ private:
     CudaTimedTransition cudaTransition;
     cudaTransition.index = transition.getIndex();
     cudaTransition.name = transition.getName().c_str();
+    cudaTransition.nameLength = transition.getName().size();
     cudaTransition.id = transition.getId().c_str();
+    cudaTransition.idLength = transition.getId().size();
+    
     cudaTransition.untimedPostset = transition.hasUntimedPostset();
     cudaTransition.urgent = transition.isUrgent();
     cudaTransition.controllable = transition.isControllable();
@@ -287,8 +292,8 @@ private:
       const std::unordered_map<const TAPN::TimedTransition *,
                                CudaTimedTransition *> &transitionMap) {
     return {convertTimeInterval(arc.getInterval()),
-            *placeMap.at(&arc.getInputPlace()),
-            *transitionMap.at(&arc.getOutputTransition()), arc.getWeight()};
+            placeMap.at(&arc.getInputPlace()),
+            transitionMap.at(&arc.getOutputTransition()), arc.getWeight()};
   }
 
   static CudaTimedOutputArc convertOutputArc(
@@ -297,8 +302,8 @@ private:
           &placeMap,
       const std::unordered_map<const TAPN::TimedTransition *,
                                CudaTimedTransition *> &transitionMap) {
-    return {*transitionMap.at(&arc.getInputTransition()),
-            *placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
+    return {transitionMap.at(&arc.getInputTransition()),
+            placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
   }
 
   static CudaTimedTransportArc convertTransportArc(
@@ -308,9 +313,9 @@ private:
       const std::unordered_map<const TAPN::TimedTransition *,
                                CudaTimedTransition *> &transitionMap) {
     return {
-        convertTimeInterval(arc.getInterval()), *placeMap.at(&arc.getSource()),
-        *transitionMap.at(&arc.getTransition()),
-        *placeMap.at(&arc.getDestination()), static_cast<int>(arc.getWeight())};
+        convertTimeInterval(arc.getInterval()), placeMap.at(&arc.getSource()),
+        transitionMap.at(&arc.getTransition()),
+        placeMap.at(&arc.getDestination()), static_cast<int>(arc.getWeight())};
   }
 
   static CudaTimedInhibitorArc convertInhibitorArc(
@@ -319,8 +324,8 @@ private:
           &placeMap,
       const std::unordered_map<const TAPN::TimedTransition *,
                                CudaTimedTransition *> &transitionMap) {
-    return {*placeMap.at(&arc.getInputPlace()),
-            *transitionMap.at(&arc.getOutputTransition()), arc.getWeight()};
+    return {placeMap.at(&arc.getInputPlace()),
+            transitionMap.at(&arc.getOutputTransition()), arc.getWeight()};
   }
 
   static PlaceType convertPlaceType(TAPN::PlaceType type) {
