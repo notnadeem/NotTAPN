@@ -1,8 +1,9 @@
-#ifndef CUDAAST_HPP_
-#define CUDAAST_HPP_
+#ifndef CUDAAST_CUH_
+#define CUDAAST_CUH_
 
 #include "CudaVisitor.cuh"
 
+#include <cuda_runtime.h>
 /*#include <iostream>*/
 #include <string>
  
@@ -414,6 +415,6 @@ private:
 };
 
 } // namespace AST
-} // namespace VerifyTAPN::Atler
+} // namespace VerifyTAPN::Cuda
 
-#endif /* AST_HPP_ */
+#endif /* AST_CUH_ */
