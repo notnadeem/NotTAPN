@@ -43,15 +43,6 @@ struct CudaRunResult {
   __host__ CudaRunResult(CudaTimedArcPetriNet tapn)
       : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength), transitionIntervals(tapn.transitionsLength),
         numericPrecision(numericPrecision) {
-    numThreads = blocks * threadsPerBlock;
-    cudaMalloc(&rngStates, numThreads * sizeof(curandState));
-    //Print allocation status
-    cudaError_t allocStatus = cudaGetLastError();
-    if (allocStatus != cudaSuccess) {
-      std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
-    } else {
-      std::cout << "Device memory for curand allocated successfully." << std::endl;
-    }
   }
 
   // Change this to cuda if needed
@@ -73,15 +64,7 @@ struct CudaRunResult {
   //    }
   //  }
 
-  __host__ ~CudaRunResult() {
-    cudaError_t freeStatus = cudaFree(rngStates);
-
-    if (freeStatus != cudaSuccess) {
-      std::cerr << "cudaFree failed: " << cudaGetErrorString(freeStatus) << std::endl;
-    } else {
-      std::cout << "Device memory freed successfully." << std::endl;
-    }
-  }
+  __host__ ~CudaRunResult() {}
 
   __device__ CudaRunResult *copy(int tid) const {
     CudaRunResult *clone = new CudaRunResult(tapn);

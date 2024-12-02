@@ -7,7 +7,7 @@ namespace VerifyTAPN::Alloc {
 
 using namespace Cuda;
 
-__host__ CudaRealMarking *RealMarkingAllocator::allocate(CudaRealMarking *realMarkingHost) {};
+__host__ CudaRealMarking* allocate(CudaRealMarking *realMarkingHost) {};
 
-__host__ void RealMarkingAllocator::allocatePointerMembers(CudaRealMarking *realMarkingHost) {};
+__host__ void allocatePointerMembers(CudaRealMarking *realMarkingHost) {};
 } // namespace VerifyTAPN::Alloc

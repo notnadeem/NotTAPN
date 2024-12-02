@@ -86,7 +86,7 @@ bool AtlerProbabilityEstimation::runCuda() {
     std::cout << "Device memory for curand allocated successfully." << std::endl;
   }
 
-  auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn, blocks, threadsPerBlock);
+  auto runres = new VerifyTAPN::Cuda::CudaRunResult(ctapn);
 
   std::cout << "Run prepare" << std::endl;
 
@@ -105,8 +105,6 @@ bool AtlerProbabilityEstimation::runCuda() {
     std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
     return false;
   }
-
-  delete runres;
 
   std::cout << "Kernel execution completed successfully." << std::endl;
 

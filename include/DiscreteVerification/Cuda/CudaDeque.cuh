@@ -6,6 +6,7 @@
 #define VERIFICATION_ATLER_CUDA_DEQUE_CUH
 
 #include <cuda_runtime.h>
+#include <stdio.h>
 
 namespace VerifyTAPN {
 namespace Cuda {

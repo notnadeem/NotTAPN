@@ -8,7 +8,7 @@ namespace VerifyTAPN::Alloc {
 
 using namespace Cuda;
 
-__host__ CudaRunResult* RunResultAllocator::allocate(CudaRunResult *runResultHost, int blocks, int threadsPerBlock) {
+__host__ CudaRunResult* allocate(CudaRunResult *runResultHost, int blocks, int threadsPerBlock) {
   int numThreads = blocks * threadsPerBlock;
 
   // Allocate device memory for rngStates
@@ -24,7 +24,7 @@ __host__ CudaRunResult* RunResultAllocator::allocate(CudaRunResult *runResultHos
   return runResultDevice;
 }
 
-__host__ void RunResultAllocator::allocatePointerMembers(CudaRunResult *runResultHost) {
+__host__ void allocatePointerMembers(CudaRunResult *runResultHost) {
   // Allocate single oduble for dates_sampled which is an pointer to dynamic array of doubles 
   /* Look into this later */
   cudaMalloc(&runResultHost->dates_sampled, sizeof(double));
