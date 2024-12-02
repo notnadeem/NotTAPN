@@ -21,7 +21,7 @@ struct SimpleRealToken {
 
 struct SimpleRealPlace {
   SimpleTimedPlace place;
-  SimpleDynamicArray<SimpleRealToken *>* tokens;
+  SimpleDynamicArray<SimpleRealToken *> *tokens;
 
   SimpleRealPlace() { tokens = new SimpleDynamicArray<SimpleRealToken *>(10); }
 
@@ -96,28 +96,31 @@ struct SimpleRealMarking {
   size_t placesLength = 0;
 
   bool deadlocked;
-  const SimpleTimedTransition *generatedBy = nullptr;
-  double fromDelay = 0.0;
 
   SimpleRealMarking() {}
 
-  SimpleRealMarking(const SimpleRealMarking &other) {
-    placesLength = other.placesLength;
-    places = other.places;
-    deadlocked = other.deadlocked;
-  }
-
   // SimpleRealMarking(const SimpleRealMarking &other) {
   //   placesLength = other.placesLength;
+  //   places = other.places;
   //   deadlocked = other.deadlocked;
-  //   places = new SimpleRealPlace[other.placesLength];
-  //   for (size_t i = 0; i < other.placesLength; i++) {
-  //       places[i] = SimpleRealPlace(other.places[i].place, other.places[i].tokens->size);
-  //       for(size_t j = 0 ; j < other.places[i].tokens->size ; j++) {
-  //           places[i].tokens->add(new SimpleRealToken{other.places[i].tokens->get(j)->age, other.places[i].tokens->get(j)->count});
-  //       }
-  //   }
   // }
+
+  SimpleRealMarking(const SimpleRealMarking &other) {
+    placesLength = other.placesLength;
+    deadlocked = other.deadlocked;
+    places = new SimpleRealPlace[other.placesLength];
+    for (size_t i = 0; i < other.placesLength; i++) {
+      places[i] =
+          SimpleRealPlace(other.places[i].place, other.places[i].tokens->size);
+      places[i].tokens = new SimpleDynamicArray<SimpleRealToken *>(
+          other.places[i].tokens->size);
+      for (size_t j = 0; j < other.places[i].tokens->size; j++) {
+        places[i].tokens->add(
+            new SimpleRealToken{other.places[i].tokens->get(j)->age,
+                                other.places[i].tokens->get(j)->count});
+      }
+    }
+  }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {

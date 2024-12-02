@@ -220,10 +220,10 @@ public:
     srm.placesLength = marking.getPlaceList().size();
     srm.places = new SimpleRealPlace[srm.placesLength];
     srm.deadlocked = marking.canDeadlock(tapn, false);
-    srm.fromDelay = marking.getPreviousDelay();
-    srm.generatedBy = marking.getGeneratedBy() != nullptr
-                          ? transitionMap.at(marking.getGeneratedBy())
-                          : nullptr;
+    // srm.fromDelay = marking.getPreviousDelay();
+    // srm.generatedBy = marking.getGeneratedBy() != nullptr
+    //                       ? transitionMap.at(marking.getGeneratedBy())
+                          // : nullptr;
 
     // Initialize SimpleRealPlace array with mapped places
     std::cout << "Converting Places..." << std::endl;

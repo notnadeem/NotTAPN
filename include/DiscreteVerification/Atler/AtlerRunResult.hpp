@@ -26,9 +26,8 @@ struct AtlerRunResult {
   SimpleDynamicArray<SimpleDynamicArray<Util::SimpleInterval>>
       transitionIntervals;
   SimpleDynamicArray<double> *dates_sampled;
-  SimpleDynamicArray<uint32_t> transitionsStatistics;
-  SimpleRealMarking *origin = nullptr;
-  SimpleRealMarking *parent = nullptr;
+  // SimpleRealMarking *origin = nullptr;
+  SimpleRealMarking* parent;
   double totalTime = 0;
   int totalSteps = 0;
 
@@ -38,34 +37,42 @@ struct AtlerRunResult {
   // add default constructor
   AtlerRunResult() {}
 
-  AtlerRunResult(SimpleTimedArcPetriNet tapn,
+  AtlerRunResult(SimpleTimedArcPetriNet tapn, SimpleRealMarking* srm,
                  const unsigned int numericPrecision = 0)
       : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength),
-        transitionIntervals(tapn.transitionsLength),
+        parent(srm), transitionIntervals(tapn.transitionsLength),
         numericPrecision(numericPrecision) {
     std::random_device rd;
     rng = std::ranlux48(rd());
   }
 
-  ~AtlerRunResult() {
-    delete origin;
-    delete parent;
+  AtlerRunResult(const AtlerRunResult &other) {
+    tapn = other.tapn;
+    defaultTransitionIntervals = other.defaultTransitionIntervals;
+    transitionIntervals = other.transitionIntervals;
+    parent = new SimpleRealMarking(*other.parent);
+    numericPrecision = other.numericPrecision;
+    rng = other.rng;
+    reset();
   }
 
-  AtlerRunResult copy() const {
-    AtlerRunResult clone(tapn);
-    clone.origin = new SimpleRealMarking(*origin);
-    clone.numericPrecision = numericPrecision;
-    clone.defaultTransitionIntervals = defaultTransitionIntervals;
-    clone.reset();
-    return clone;
-  }
+  // ~AtlerRunResult() {
+  //   // delete origin;
+  //   delete parent;
+  // }
 
-  void prepare(SimpleRealMarking *initMarking) {
-    origin = new SimpleRealMarking(*initMarking);
-    parent = new SimpleRealMarking(*initMarking);
+  // AtlerRunResult *copy() const {
+  //   AtlerRunResult* clone = new AtlerRunResult(tapn, parent);
+  //   clone->parent = new SimpleRealMarking(*parent);
+  //   clone->numericPrecision = numericPrecision;
+  //   clone->defaultTransitionIntervals = defaultTransitionIntervals;
+  //   clone->reset();
+  //   return clone;
+  // }
 
-    double originMaxDelay = origin->availableDelay();
+  void prepare() {
+    // origin = new SimpleRealMarking(*initMarking);
+    double originMaxDelay = parent->availableDelay();
 
     auto *invIntervals =
         new SimpleDynamicArray<Util::SimpleInterval>(tapn.transitionsLength);
@@ -98,10 +105,6 @@ struct AtlerRunResult {
   }
 
   void reset() {
-    if (parent != nullptr)
-      delete parent;
-    parent = new SimpleRealMarking(*origin);
-
     transitionIntervals = defaultTransitionIntervals;
     maximal = false;
     totalTime = 0.0;
@@ -172,20 +175,18 @@ struct AtlerRunResult {
     parent->deadlocked = deadlocked;
   }
 
-  SimpleRealMarking *next() {
+  bool next() {
     auto [winner, delay] = getWinnerTransitionAndDelay();
 
     if (delay == std::numeric_limits<double>::infinity()) {
       // print delay is infinity
       // std::cout << "Delay is infinity/Deadlocked" << std::endl;
       maximal = true;
-      return nullptr;
+      return false;
     }
 
     parent->deltaAge(delay);
     totalTime += delay;
-
-    parent->fromDelay = delay + parent->fromDelay;
 
     if (winner != nullptr) {
       // std::cout << "Winner: " << winner->name << std::endl;
@@ -194,24 +195,18 @@ struct AtlerRunResult {
       totalSteps++;
       dates_sampled->set(winner->index,
                          std::numeric_limits<double>::infinity());
-      auto child = fire(winner);
+       fire(winner);
 
-      child->generatedBy = winner;
-      delete parent;
-      std::cout << "Child marking state" << std::endl;
-      std::cout << "Child place tokens length: " << child->placesLength
-                << std::endl;
-      for (size_t i = 0; i < child->placesLength; i++) {
-        std::cout << "Place " << child->places[i].place.name
-                  << " tokens length: " << child->places[i].tokens->size
-                  << std::endl;
-        for (size_t j = 0; j < child->places[i].tokens->size; j++) {
-          auto token = child->places[i].tokens->get(j);
-          std::cout << "Token age: " << token->age << std::endl;
-          std::cout << "Token count: " << token->count << std::endl;
-        }
-      }
-      parent = child;
+       std::cout << "New marking:" << std::endl;
+       for (size_t i = 0; i < parent->placesLength; i++) {
+         std::cout << "Place " << i << ": ";
+         for (size_t j = 0; j < parent->places[i].tokens->size; j++) {
+           auto token = parent->places[i].tokens->get(j);
+           std::cout << "(" << parent->places[i].place.name << ","
+                     << token->age << ") ";
+         }
+         std::cout << std::endl;
+       }
     }
 
     for (size_t i = 0; i < transitionIntervals.size; i++) {
@@ -223,7 +218,7 @@ struct AtlerRunResult {
     }
 
     refreshTransitionsIntervals();
-    return parent;
+    return true;
   }
 
   std::pair<SimpleTimedTransition *, double> getWinnerTransitionAndDelay() {
@@ -419,7 +414,7 @@ struct AtlerRunResult {
   }
 
   SimpleDynamicArray<SimpleRealToken *>
-  removeRandom(SimpleDynamicArray<SimpleRealToken *>& tokenList,
+  removeRandom(SimpleDynamicArray<SimpleRealToken *> &tokenList,
                const SimpleTimeInterval &interval, const int weight) {
     // std::cout << "Remove random method is being called" << std::endl;
     auto res = SimpleDynamicArray<SimpleRealToken *>(tokenList.size);
@@ -453,7 +448,7 @@ struct AtlerRunResult {
   }
 
   SimpleDynamicArray<SimpleRealToken *>
-  removeYoungest(SimpleDynamicArray<SimpleRealToken *>& tokenList,
+  removeYoungest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
                  const SimpleTimeInterval &interval, const int weight) {
     // std::cout << "Remove youngest method is being called" << std::endl;
 
@@ -478,7 +473,7 @@ struct AtlerRunResult {
       // std::cout << "Count: " << count << std::endl;
       if (count >= remaining) {
         // std::cout << "Count is greater or equal to remaining" << std::endl;
-        res.add(new SimpleRealToken{.age = age, .count= count});
+        res.add(new SimpleRealToken{.age = age, .count = count});
         token->remove(remaining);
         if (token->count == 0)
           tokenList.remove(i);
@@ -486,7 +481,7 @@ struct AtlerRunResult {
         break;
       } else {
         // std::cout << "Count is less than remaining" << std::endl;
-        res.add(new SimpleRealToken{.age = age, .count= count});
+        res.add(new SimpleRealToken{.age = age, .count = count});
         remaining -= count;
         tokenList.remove(i);
       }
@@ -500,7 +495,7 @@ struct AtlerRunResult {
 
   // NOTE: Double check this method to ensure it is correct
   SimpleDynamicArray<SimpleRealToken *>
-  removeOldest(SimpleDynamicArray<SimpleRealToken *>& tokenList,
+  removeOldest(SimpleDynamicArray<SimpleRealToken *> &tokenList,
                const SimpleTimeInterval &timeInterval, const int weight) {
 
     // std::cout << "Remove oldest method is being called" << std::endl;
@@ -515,14 +510,14 @@ struct AtlerRunResult {
       }
       int count = token->count;
       if (count >= remaining) {
-        res.add(new SimpleRealToken{.age = age, .count= count});
+        res.add(new SimpleRealToken{.age = age, .count = count});
         token->remove(remaining);
         if (token->count == 0)
           tokenList.remove(i);
         remaining = 0;
         break;
       } else {
-        res.add(new SimpleRealToken{.age = age, .count= count});
+        res.add(new SimpleRealToken{.age = age, .count = count});
         remaining -= count;
         tokenList.remove(i);
       }
@@ -531,14 +526,12 @@ struct AtlerRunResult {
     return res;
   }
 
-  SimpleRealMarking *fire(SimpleTimedTransition *transition) {
+  bool fire(SimpleTimedTransition *transition) {
     if (transition == nullptr) {
-      assert(false);
-      return nullptr;
+      return false;
     }
 
-    SimpleRealMarking *child = new SimpleRealMarking(*parent);
-    SimpleRealPlace *placeList = child->places;
+    SimpleRealPlace *placeList = parent->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       SimpleTimedInputArc *input = transition->preset[i];
@@ -568,7 +561,7 @@ struct AtlerRunResult {
       auto transport = transition->transportArcs[i];
       int destInv = transport->destination.timeInvariant.bound;
       SimpleRealPlace place = placeList[transport->source.index];
-      SimpleDynamicArray<SimpleRealToken *> * tokenList = place.tokens;
+      SimpleDynamicArray<SimpleRealToken *> *tokenList = place.tokens;
       SimpleDynamicArray<SimpleRealToken *> consumed(10);
       SimpleTimeInterval &arcInterval = transport->interval;
       if (destInv < arcInterval.upperBound)
@@ -600,14 +593,16 @@ struct AtlerRunResult {
     for (size_t i = 0; i < transition->postsetLength; i++) {
       SimpleTimedPlace *place = transition->postset[i]->outputPlace;
       SimpleTimedOutputArc *post = transition->postset[i];
-      auto token = new SimpleRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
-      child->addTokenInPlace(*place, *token);
+      auto token = new SimpleRealToken{.age = 0.0,
+                                       .count = static_cast<int>(post->weight)};
+      parent->addTokenInPlace(*place, *token);
     }
     for (size_t i = 0; i < toCreate.size; i++) {
       auto [place, token] = toCreate.get(i);
-      child->addTokenInPlace(*place, *token);
+      parent->addTokenInPlace(*place, *token);
     }
-    return child;
+
+    return true;
   }
 };
 } // namespace VerifyTAPN::Atler
