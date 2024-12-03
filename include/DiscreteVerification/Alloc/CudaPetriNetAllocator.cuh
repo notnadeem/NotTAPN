@@ -3,13 +3,19 @@
 
 #include "DiscreteVerification/Cuda/CudaTimedArcPetriNet.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
-#include <unordered_map>
 #include <cuda_runtime.h>
+#include <unordered_map>
 
 namespace VerifyTAPN::Alloc {
 using namespace Cuda;
 
 struct CudaPetriNetAllocator {
+  std::unordered_map<CudaTimedPlace *, CudaTimedPlace *> place_map;
+  std::unordered_map<CudaTimedTransition *, CudaTimedTransition *> transition_map;
+  std::unordered_map<CudaTimedInputArc *, CudaTimedInputArc *> inputArc_map;
+  std::unordered_map<CudaTimedOutputArc *, CudaTimedOutputArc *> outputArc_map;
+  std::unordered_map<CudaTimedTransportArc *, CudaTimedTransportArc *> transportArc_map;
+  std::unordered_map<CudaTimedInhibitorArc *, CudaTimedInhibitorArc *> inhibitorArc_map;
 
   static CudaTimedPlace **cuda_allocate_places(CudaTimedArcPetriNet *h_petrinet,
                                                std::unordered_map<CudaTimedPlace *, CudaTimedPlace *> &place_map) {
@@ -69,7 +75,7 @@ struct CudaPetriNetAllocator {
       cudaMalloc(&d_id, sizeof(char) * h_petrinet->transitions[i]->idLength);
       printf("TransAllocator: %d Name: %s, Id: %s\n", i, h_petrinet->transitions[i]->name,
              h_petrinet->transitions[i]->id);
-      
+
       cudaMemcpy(d_name, h_petrinet->transitions[i]->name, sizeof(char) * h_petrinet->transitions[i]->nameLength,
                  cudaMemcpyHostToDevice);
       cudaMemcpy(d_id, h_petrinet->transitions[i]->id, sizeof(char) * h_petrinet->transitions[i]->idLength,
@@ -453,30 +459,25 @@ struct CudaPetriNetAllocator {
 
     free(temp_transitions);
   }
+
   CudaTimedArcPetriNet *cuda_allocator(CudaTimedArcPetriNet *h_petrinet) {
 
-    std::unordered_map<CudaTimedPlace *, CudaTimedPlace *> place_map;
     CudaTimedPlace **d_places = cuda_allocate_places(h_petrinet, place_map);
     printf("Allocated places\n");
 
-    std::unordered_map<CudaTimedTransition *, CudaTimedTransition *> transition_map;
     CudaTimedTransition **d_transitions = cuda_allocate_timedTransitions(h_petrinet, transition_map);
     printf("Allocated transitions\n");
 
-    std::unordered_map<CudaTimedInputArc *, CudaTimedInputArc *> inputArc_map;
     CudaTimedInputArc **d_inputArcs = cuda_allocate_inputArcs(h_petrinet, place_map, transition_map, inputArc_map);
     printf("Allocated inputArcs\n");
 
-    std::unordered_map<CudaTimedOutputArc *, CudaTimedOutputArc *> outputArc_map;
     CudaTimedOutputArc **d_outputArcs = cuda_allocate_outputArcs(h_petrinet, place_map, transition_map, outputArc_map);
     printf("Allocated outputArcs\n");
 
-    std::unordered_map<CudaTimedTransportArc *, CudaTimedTransportArc *> transportArc_map;
     CudaTimedTransportArc **d_transportArcs =
         cuda_allocate_transportArcs(h_petrinet, place_map, transition_map, transportArc_map);
     printf("Allocated transportArcs\n");
 
-    std::unordered_map<CudaTimedInhibitorArc *, CudaTimedInhibitorArc *> inhibitorArc_map;
     CudaTimedInhibitorArc **d_inhibitorArcs =
         cuda_allocate_inhibitorArcs(h_petrinet, place_map, transition_map, inhibitorArc_map);
     printf("Allocated inhibitorArcs\n");

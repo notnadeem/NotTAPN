@@ -121,7 +121,7 @@ struct CudaRealMarking {
 
   // UPDATE: new and delete should be supported but slower, fix this later
   // Try not to use this
-  __host__ __device__ ~CudaRealMarking() { delete[] places; }
+  __host__ __device__ ~CudaRealMarking() {}
 
   __host__ __device__ void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {

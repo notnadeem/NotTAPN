@@ -222,11 +222,14 @@ public:
     // Initialize CudaRealPlace array with mapped places
     std::cout << "Converting Places..." << std::endl;
     auto placeLength = marking.getPlaceList().size();
-    srm.places = new CudaRealPlace*[placeLength];
+    srm.places = (CudaRealPlace **)malloc(sizeof(CudaRealPlace *) * placeLength);
     for (size_t i = 0; i < placeLength; i++) {
-      srm.places[i] = new CudaRealPlace();
+      srm.places[i] = (CudaRealPlace *)malloc(sizeof(CudaRealPlace));
+      // srm.places[i]->tokens = (CudaDynamicArray<CudaRealToken*>*)malloc(sizeof(CudaDynamicArray<CudaRealToken*>));
+      // srm.places[i]->tokens->CudaDynamicArray();
+      srm.places[i]->tokens = new CudaDynamicArray<CudaRealToken *>();
       DiscreteVerification::RealPlace &realPlace = marking.getPlaceList()[i];
-
+     
       // Get mapped place
       auto cudaPlace = placeMap.at(realPlace.place);
 
@@ -235,8 +238,10 @@ public:
       for (size_t j = 0; j < tokenLength; j++) {
           //print token count
           std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
-        srm.places[i]->tokens->add(new CudaRealToken{
-            realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
+        CudaRealToken *token = (CudaRealToken *)malloc(sizeof(CudaRealToken));
+        token->count = realPlace.tokens[j].getCount();
+        token->age = realPlace.tokens[j].getAge();
+        srm.places[i]->tokens->add(token);
       }
 
       // Set CudaRealPlace fields

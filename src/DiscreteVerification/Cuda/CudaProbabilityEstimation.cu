@@ -1,4 +1,5 @@
 #include "DiscreteVerification/Alloc/CudaPetriNetAllocator.cuh"
+#include "DiscreteVerification/Alloc/RealMarkingAllocator.cuh"
 #include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/Cuda/CudaQueryVisitor.cuh"
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
@@ -9,6 +10,8 @@
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
+using namespace VerifyTAPN::Cuda;
+
 __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
                                     int *stepBound, int *successCount, int *runsNeeded, curandState *states) {
@@ -46,22 +49,91 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::Cud
   }
 }
 
-__global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn, u_int *runNeed) {
+__global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn,
+                                     VerifyTAPN::Cuda::CudaRealMarking *marking, u_int *runNeed) {
+  printf("Kernel executed\n");
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid > 0) return;
 
-  printf("Petri net maxConstant: %s\n", pn->maxConstant);
+  printf("Thread id: %d\n", tid);
+  // printf("Petri net maxConstant: %s\n", pn->maxConstant);
   printf("Petri net placesLength: %d\n", pn->placesLength);
-  for (int i = 0; i < pn->placesLength; i++) {
-    printf("Place id: %d\n", pn->places[i]->id);
-    printf("Place name: %s\n", pn->places[i]->name);
-    printf("Place invariant: %s\n", pn->places[i]->timeInvariant);
-    printf("Place type: %s\n", pn->places[i]->type);
-    printf("Place containsInhibitorArcs: %s\n", pn->places[i]->containsInhibitorArcs);
-    printf("Place inputArcsLength: %d\n", pn->places[i]->inputArcsLength);
-    for (int x = 0; x < pn->places[i]->inputArcsLength; x++) {
-      printf("Place inputArcs[%d]: %s\n", x, pn->places[i]->inputArcs[x]->weight);
+
+  printf("__Run_Transitions_Test__:\n\n");
+  printf("Num of transitions is: %llu\n", (unsigned long long)pn->transitionsLength);
+
+  for (int i = 0; i < pn->transitionsLength; i++) {
+    printf("TimedTransition with index: %d, UntimedPostSet: %d, Urgent: %d, "
+           "Controllable: %d, Position: < %f , %f >, Weight: %f, Name: %s, Id: "
+           "%s\n",
+           pn->transitions[i]->index, pn->transitions[i]->untimedPostset, pn->transitions[i]->urgent,
+           pn->transitions[i]->controllable, pn->transitions[i]->_position.first, pn->transitions[i]->_position.second,
+           pn->transitions[i]->_weight, pn->transitions[i]->name, pn->transitions[i]->id);
+    printf("Transition has pointer: %p to preset, Name place in preset double "
+           "pointer preset[0]: %s with pointer: %p\n",
+           pn->transitions[i]->preset, pn->transitions[i]->preset[0]->inputPlace->name,
+           pn->transitions[i]->preset[0]->inputPlace);
+    printf("Transition has pointer: %p to postset, Name place in postset "
+           "double pointer postset[0]: %s, with pointer: %p\n",
+           pn->transitions[i]->postset, pn->transitions[i]->postset[0]->outputPlace->name,
+           pn->transitions[i]->postset[0]->outputPlace);
+    if (pn->transitions[i]->transportArcsLength > 0) {
+      printf("Transition has pointer: %p to transportArcs, Source name in "
+             "transportarcs double pointer transportArcs[0]: %s, with pointer: %p\n",
+             pn->transitions[i]->transportArcs, pn->transitions[i]->transportArcs[0]->source->name,
+             pn->transitions[i]->transportArcs[0]->source);
+    }
+    if (pn->transitions[i]->inhibitorArcsLength > 0) {
+      printf("Transition has pointer: %p to inhibitorArcs, Place name in "
+             "inhibitorArc double pointer inhibitor[0]: %s, with pointer: %p\n",
+             pn->transitions[i]->inhibitorArcs, pn->transitions[i]->inhibitorArcs[0]->inputPlace->name,
+             pn->transitions[i]->inhibitorArcs[0]->inputPlace);
+    }
+    printf("\nTimed Transition %d Has FiringMode: %d\n\n", i, pn->transitions[i]->_firingMode);
+  }
+
+  printf("Logging all places and their token counts:\n");
+  for (size_t i = 0; i < pn->placesLength; i++) {
+    const char *place_name = pn->places[i]->name;
+    // Assume h_marking->places[i] corresponds to pn->places[i] // Adjust based on your marking structure
+    printf("Place %zu: Name: %s, Token Count: %d\n", i, place_name);
+
+    // Print inputArcs
+    if (pn->places[i]->inputArcsLength > 0) {
+      printf("Place has inputArcs: %p\n", pn->places[i]->inputArcs);
+      printf("First inputArc Weight: %s, Pointer: %p\n", pn->places[i]->inputArcs[0]->weight,
+             pn->places[i]->inputArcs[0]);
     }
 
-    printf("Kernel executed\n");
+    // Print transportArcs
+    if (pn->places[i]->transportArcsLength > 0) {
+      printf("Place has transportArcs: %p\n", pn->places[i]->transportArcs);
+      printf("First transportArc Source Name: %s, Pointer: %p\n", pn->places[i]->transportArcs[0]->source->name,
+             pn->places[i]->transportArcs[0]->source);
+    }
+
+    // Print prodTransportArcs
+    if (pn->places[i]->prodTransportArcsLength > 0) {
+      printf("Place has prodTransportArcs: %p\n", pn->places[i]->prodTransportArcs);
+      printf("First prodTransportArc Source Name: %s, Pointer: %p\n", pn->places[i]->prodTransportArcs[0]->source->name,
+             pn->places[i]->prodTransportArcs[0]->source);
+    }
+
+    // Print inhibitorArcs
+    if (pn->places[i]->inhibitorArcsLength > 0) {
+      printf("Place has inhibitorArcs: %p\n", pn->places[i]->inhibitorArcs);
+      printf("First inhibitorArc InputPlace Name: %s, Pointer: %p\n", pn->places[i]->inhibitorArcs[0]->inputPlace->name,
+             pn->places[i]->inhibitorArcs[0]->inputPlace);
+    }
+
+    // Print outputArcs
+    if (pn->places[i]->outputArcsLength > 0) {
+      printf("Place has outputArcs: %p\n", pn->places[i]->outputArcs);
+      printf("First outputArc Weight: %s, Pointer: %p\n", pn->places[i]->outputArcs[0]->weight,
+             pn->places[i]->outputArcs[0]);
+    }
+
+    printf("\n");
   }
 };
 
@@ -94,20 +166,23 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   // Allocate the petry net
 
-  VerifyTAPN::Alloc::CudaPetriNetAllocator pnAllocator;
+  VerifyTAPN::Alloc::CudaPetriNetAllocator pnAllocator = VerifyTAPN::Alloc::CudaPetriNetAllocator();
+  VerifyTAPN::Alloc::RealMarkingAllocator markingAllocator;
 
   VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn = pnAllocator.cuda_allocator(&ctapn);
+  VerifyTAPN::Cuda::CudaRealMarking *marking =
+      markingAllocator.allocate_real_marking(&ciMarking, pnAllocator.transition_map, pnAllocator.place_map);
 
-  testAllocationKernel<<<1, 1>>>(pn, &this->runsNeeded);
+  testAllocationKernel<<<1, 1>>>(pn, marking, &this->runsNeeded);
   // Allocate the initial marking
 
-  // cudaError_t err = cudaGetLastError();
-  // if (err != cudaSuccess) {
-  //   std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
-  //   return false;
-  // }
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    return false;
+  }
 
-  // err = cudaDeviceSynchronize();
+  err = cudaDeviceSynchronize();
   // // Allocate the query
 
   // cudaError_t allocStatus = cudaGetLastError();

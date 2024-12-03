@@ -33,8 +33,8 @@ __host__ CudaRunResult *allocate(CudaRunResult *h_run_result, int blocks, int th
 
   RealMarkingAllocator realMarkingAllocator;
 
-  temp_run_result->parent = realMarkingAllocator.allocate(h_run_result->parent, transition_map, place_map);
-  temp_run_result->origin = realMarkingAllocator.allocate(h_run_result->origin, transition_map, place_map);
+  temp_run_result->parent = realMarkingAllocator.allocate_real_marking(h_run_result->parent, transition_map, place_map);
+  temp_run_result->origin = realMarkingAllocator.allocate_real_marking(h_run_result->origin, transition_map, place_map);
 
 
   temp_run_result->defaultTransitionIntervals = h_run_result->defaultTransitionIntervals;
@@ -43,7 +43,7 @@ __host__ CudaRunResult *allocate(CudaRunResult *h_run_result, int blocks, int th
   // Copy CudaRunResult from host to device
   cudaMemcpy(runResultDevice, temp_run_result, sizeof(CudaRunResult), cudaMemcpyHostToDevice);
 
-  cudaFree(temp_run_result);
+  free(temp_run_result);
   return runResultDevice;
 }
 

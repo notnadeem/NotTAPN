@@ -39,7 +39,7 @@
         "${workspaceFolder}/example-nets/model.xml",
         "${workspaceFolder}/example-workflows/query1.xml"
       ],
-      "stopAtEntry": true,
+      "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
@@ -58,7 +58,10 @@
         }
       ],
       "logging": {
-        "engineLogging": true
+        "trace": true,
+        "engineLogging": true,
+        "programOutput": true,
+        "exceptions": true
       }
     }
   ]
