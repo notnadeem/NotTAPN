@@ -27,7 +27,7 @@ struct AtlerRunResult {
       transitionIntervals;
   SimpleDynamicArray<double> *dates_sampled;
   // SimpleRealMarking *origin = nullptr;
-  SimpleRealMarking* parent;
+  SimpleRealMarking *parent;
   double totalTime = 0;
   int totalSteps = 0;
 
@@ -37,7 +37,7 @@ struct AtlerRunResult {
   // add default constructor
   AtlerRunResult() {}
 
-  AtlerRunResult(SimpleTimedArcPetriNet tapn, SimpleRealMarking* srm,
+  AtlerRunResult(SimpleTimedArcPetriNet tapn, SimpleRealMarking *srm,
                  const unsigned int numericPrecision = 0)
       : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength),
         parent(srm), transitionIntervals(tapn.transitionsLength),
@@ -52,7 +52,8 @@ struct AtlerRunResult {
     transitionIntervals = other.transitionIntervals;
     parent = new SimpleRealMarking(*other.parent);
     numericPrecision = other.numericPrecision;
-    rng = other.rng;
+    std::random_device rd;
+    rng = std::ranlux48(rd());
     reset();
   }
 
@@ -195,18 +196,18 @@ struct AtlerRunResult {
       totalSteps++;
       dates_sampled->set(winner->index,
                          std::numeric_limits<double>::infinity());
-       fire(winner);
+      fire(winner);
 
-       std::cout << "New marking:" << std::endl;
-       for (size_t i = 0; i < parent->placesLength; i++) {
-         std::cout << "Place " << i << ": ";
-         for (size_t j = 0; j < parent->places[i].tokens->size; j++) {
-           auto token = parent->places[i].tokens->get(j);
-           std::cout << "(" << parent->places[i].place.name << ","
-                     << token->age << ") ";
-         }
-         std::cout << std::endl;
-       }
+      // std::cout << "New marking:" << std::endl;
+      // for (size_t i = 0; i < parent->placesLength; i++) {
+      //   std::cout << "Place " << i << ": ";
+      //   for (size_t j = 0; j < parent->places[i].tokens->size; j++) {
+      //     auto token = parent->places[i].tokens->get(j);
+      //     std::cout << "(" << parent->places[i].place.name << ","
+      //               << token->age << ") ";
+      //   }
+      //   std::cout << std::endl;
+      // }
     }
 
     for (size_t i = 0; i < transitionIntervals.size; i++) {

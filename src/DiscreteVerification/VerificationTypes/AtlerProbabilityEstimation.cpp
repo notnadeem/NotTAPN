@@ -65,7 +65,8 @@ bool AtlerProbabilityEstimation::run() {
 
   int count = 0;
   int success = 0;
-  for (int i = 0; i < 100; i++) {
+
+  for (int i = 0; i < runsNeeded; i++) {
     // auto runner = new Atler::AtlerRunResult(stapn);
     // runner->prepare(&siMarking);
     Atler::AtlerRunResult *runner = clones->get(i);
@@ -100,10 +101,23 @@ bool AtlerProbabilityEstimation::run() {
       // }
     }
 
+
     count++;
     if (simpleSMCQuery->getQuantifier() == Atler::PG) {
       std::cout << "Number of runs: " << count << std::endl;
       std::cout << "Failed runs: " << success << std::endl;
+    }
+
+    // print data from the new marking
+    std::cout << "New marking:" << std::endl;
+    for (size_t i = 0; i < runner->parent->placesLength; i++) {
+      std::cout << "Place " << i << ": ";
+      for (size_t j = 0; j < runner->parent->places[i].tokens->size; j++) {
+        auto token = runner->parent->places[i].tokens->get(j);
+        std::cout << "(" << runner->parent->places[i].place.name << ","
+                  << token->age << ") ";
+      }
+      std::cout << std::endl;
     }
 
     // std::cout << "SIMarking:" << std::endl;

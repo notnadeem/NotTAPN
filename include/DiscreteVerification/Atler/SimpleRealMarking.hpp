@@ -106,6 +106,7 @@ struct SimpleRealMarking {
   // }
 
   SimpleRealMarking(const SimpleRealMarking &other) {
+    std::cout << "Copying marking" << std::endl;
     placesLength = other.placesLength;
     deadlocked = other.deadlocked;
     places = new SimpleRealPlace[other.placesLength];
