@@ -172,7 +172,7 @@ void SimpleQueryVisitor::visit(SimpleQuery &query, AST::Result &context) {
     static_cast<BoolResult &>(context).value =
         !static_cast<BoolResult &>(context).value;
   }
-  query.eval = static_cast<IntResult &>(context).value;
+  query.eval = static_cast<BoolResult &>(context).value;
 }
 
 void SimpleQueryVisitor::visit(DeadlockExpression &expr, AST::Result &context) {

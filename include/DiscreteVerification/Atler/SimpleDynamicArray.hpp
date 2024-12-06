@@ -11,19 +11,34 @@ template <typename T> struct SimpleDynamicArray {
   T *arr;
   int size;
   size_t capacity;
+  bool ownsArray;
 
-  SimpleDynamicArray() : size(0), capacity(1) { arr = new T[capacity]; }
+  SimpleDynamicArray() : size(0), capacity(1), ownsArray(true) {
+    arr = new T[capacity];
+  }
 
-  SimpleDynamicArray(size_t initialCapacity) : size(0) {
+  SimpleDynamicArray(size_t initialCapacity) : size(0), ownsArray(true) {
     capacity = (initialCapacity == 0) ? 1 : initialCapacity;
     if (capacity == 0)
       capacity = 1;
     arr = new T[capacity];
   }
 
-  // ~SimpleDynamicArray() {
-  //   delete[] arr;
-  // }
+  SimpleDynamicArray(const SimpleDynamicArray<T> &other) {
+    size = other.size;
+    capacity = other.capacity;
+    ownsArray = other.ownsArray;
+    arr = new T[capacity];
+    for (size_t i = 0; i < size; i++) {
+      arr[i] = other.arr[i];
+    }
+  }
+
+  ~SimpleDynamicArray() {
+    if (ownsArray) {
+      delete[] arr;
+    }
+  }
 
   void resize() {
     capacity *= 2;

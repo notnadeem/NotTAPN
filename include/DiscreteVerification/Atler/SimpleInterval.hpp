@@ -121,6 +121,8 @@ inline void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterv
     first.add(element);
 }
 
+// NOTE: Remember to delete the interval array within the returned
+// SimpleDynamicArray when it is no longer needed
 inline SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArray<SimpleInterval>& first, const SimpleDynamicArray<SimpleInterval>& second) {
     SimpleDynamicArray<SimpleInterval> result = SimpleDynamicArray<SimpleInterval>(first.size + second.size);
 
@@ -148,7 +150,7 @@ inline SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArr
             j++;
         }
     }
-    return result;
+    return SimpleDynamicArray<SimpleInterval>(result);
 }
 
 } /* namespace Util */

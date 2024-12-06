@@ -4,7 +4,7 @@
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
 #include "SimpleDynamicArray.hpp"
 #include "SimpleTimedPlace.hpp"
-#include "SimpleTimedTransition.hpp"
+// #include "SimpleTimedTransition.hpp"
 #include <iostream>
 #include <limits>
 
@@ -25,16 +25,24 @@ struct SimpleRealPlace {
 
   SimpleRealPlace() { tokens = new SimpleDynamicArray<SimpleRealToken *>(10); }
 
-  // SimpleRealPlace(const SimpleRealPlace &other) {
-  //   place = other.place;
-  //   tokens = new SimpleDynamicArray<SimpleRealToken *>(other.tokens->size);
-  //   for (size_t i = 0; i < other.tokens->size; i++) {
-  //     tokens->add(new SimpleRealToken(*other.tokens->get(i)));
-  //   }
-  // }
+  SimpleRealPlace(const SimpleRealPlace &other) {
+    place = other.place;
+    tokens = new SimpleDynamicArray<SimpleRealToken *>(other.tokens->size);
+    for (size_t i = 0; i < other.tokens->size; i++) {
+      tokens->add(new SimpleRealToken{.age = other.tokens->get(i)->age,
+                                      .count = other.tokens->get(i)->count});
+    }
+  }
 
   SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength) : place(place) {
     tokens = new SimpleDynamicArray<SimpleRealToken *>(tokensLength);
+  }
+
+  ~SimpleRealPlace() {
+    for (size_t i = 0; i < tokens->size; i++) {
+      delete tokens->get(i);
+    }
+    delete tokens;
   }
 
   // TODO: check if this works
@@ -92,7 +100,7 @@ struct SimpleRealPlace {
 };
 
 struct SimpleRealMarking {
-  SimpleRealPlace *places;
+  SimpleRealPlace **places;
   size_t placesLength = 0;
 
   bool deadlocked;
@@ -106,35 +114,34 @@ struct SimpleRealMarking {
   // }
 
   SimpleRealMarking(const SimpleRealMarking &other) {
-    std::cout << "Copying marking" << std::endl;
     placesLength = other.placesLength;
     deadlocked = other.deadlocked;
-    places = new SimpleRealPlace[other.placesLength];
+    places = new SimpleRealPlace*[other.placesLength];
     for (size_t i = 0; i < other.placesLength; i++) {
-      places[i] =
-          SimpleRealPlace(other.places[i].place, other.places[i].tokens->size);
-      places[i].tokens = new SimpleDynamicArray<SimpleRealToken *>(
-          other.places[i].tokens->size);
-      for (size_t j = 0; j < other.places[i].tokens->size; j++) {
-        places[i].tokens->add(
-            new SimpleRealToken{other.places[i].tokens->get(j)->age,
-                                other.places[i].tokens->get(j)->count});
-      }
+        places[i] = new SimpleRealPlace(*other.places[i]);
     }
+  }
+
+  ~SimpleRealMarking() {
+      for (size_t i = 0; i < placesLength; i++) {
+        delete places[i];
+      }
+      delete[] places;
   }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
-      places[i].deltaAge(x);
+      places[i]->deltaAge(x);
     }
   }
 
   uint32_t numberOfTokensInPlace(int placeId) const {
-    return places[placeId].totalTokenCount();
+    return places[placeId]->totalTokenCount();
   }
 
   void addTokenInPlace(SimpleTimedPlace &place, SimpleRealToken &newToken) {
-    places[place.index].addToken(newToken);
+    auto token = new SimpleRealToken{.age = newToken.age, .count = newToken.count};
+    places[place.index]->addToken(*token);
   }
 
   bool canDeadlock(const SimpleTimedArcPetriNet &tapn, int maxDelay,
@@ -150,9 +157,9 @@ struct SimpleRealMarking {
   double availableDelay() const {
     double available = std::numeric_limits<double>::infinity();
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].isEmpty())
+      if (places[i]->isEmpty())
         continue;
-      double delay = places[i].availableDelay();
+      double delay = places[i]->availableDelay();
       if (delay < available) {
         available = delay;
       }
