@@ -12,14 +12,21 @@
 namespace VerifyTAPN::DiscreteVerification {
 using namespace VerifyTAPN::Cuda;
 
+//For now single kernel execution per run needed
+//Since every run can have different execution time could be nice to try running multiple runs per kernel to improve warp utilization
+
 __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
-                                    int *stepBound, int *successCount, int *runsNeeded, curandState *states) {
+                                    int *stepBound, int *successCount, int *runsNeeded, curandState *states, int *rand_seed) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
   if (tid >= runNeed) return;
 
-  curand_init(clock64(), tid, 0, &states[tid]);
+  curand_init(*rand_seed, tid, 0, &states[tid]);
+
+  // Copy global state to local memory for faster access
+  curandState local_r_state = states[tid];
+
   if (tid % 1000 == 0) {
     printf("Thread %d initialized\n", tid);
   }
@@ -45,7 +52,7 @@ __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::Cud
       atomicAdd(successCount, 1);
       break;
     }
-    newMarking = runner->next(tid);
+    newMarking = runner->next(&local_r_state);
   }
 }
 
@@ -96,7 +103,7 @@ __global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn,
   for (size_t i = 0; i < pn->placesLength; i++) {
     const char *place_name = pn->places[i]->name;
     // Assume h_marking->places[i] corresponds to pn->places[i] // Adjust based on your marking structure
-    printf("Place %zu: Name: %s, Token Count: %d\n", i, place_name);
+    printf("Place %d:, Token Count: %s\n", i, place_name);
 
     // Print inputArcs
     if (pn->places[i]->inputArcsLength > 0) {
@@ -134,6 +141,30 @@ __global__ void testAllocationKernel(VerifyTAPN::Cuda::CudaTimedArcPetriNet *pn,
     }
 
     printf("\n");
+
+    printf("\nLogging Real Marking details:\n");
+    printf("Marking deadlocked: %d\n", marking->deadlocked);
+    printf("Marking fromDelay: %f\n", marking->fromDelay);
+    printf("Marking generatedBy: %p\n", marking->generatedBy);
+    printf("Marking places length: %zu\n", marking->placesLength);
+
+    for (size_t i = 0; i < marking->placesLength; i++) {
+      CudaRealPlace *place = marking->places[i];
+      printf("\nReal Place %zu:\n", i);
+      printf("Place Name: %s\n", place->place->name);
+      printf("Total Token Count: %d\n", place->totalTokenCount());
+      printf("Available Delay: %f\n", place->availableDelay());
+
+      // Print tokens
+      printf("Tokens in place:\n");
+      for (size_t j = 0; j < place->tokens->size; j++) {
+        CudaRealToken *token = place->tokens->get(j);
+        printf("Token %zu - Age: %f, Count: %d\n", j, token->age, token->count);
+      }
+
+      printf("Max Token Age: %f\n", place->maxTokenAge());
+      printf("Is Empty: %d\n\n", place->isEmpty());
+    }
   }
 };
 

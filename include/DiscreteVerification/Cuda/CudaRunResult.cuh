@@ -66,16 +66,16 @@ struct CudaRunResult {
 
   __host__ ~CudaRunResult() {}
 
-  __device__ CudaRunResult *copy(int tid) const {
+  __device__ CudaRunResult *copy(curandState *local_r_state) const {
     CudaRunResult *clone = new CudaRunResult(tapn);
     clone->origin = new CudaRealMarking(*origin);
     clone->numericPrecision = numericPrecision;
     clone->defaultTransitionIntervals = defaultTransitionIntervals;
-    clone->reset(tid);
+    clone->reset(local_r_state);
     return clone;
   }
 
-  __device__ void prepare(CudaRealMarking initMarking, int tid) {
+  __device__ void prepare(CudaRealMarking initMarking, curandState *local_r_state) {
     origin = new CudaRealMarking(initMarking);
     parent = new CudaRealMarking(initMarking);
     printf("Prepared\n");
@@ -104,10 +104,10 @@ struct CudaRunResult {
       }
       printf("End of Intersection 2\n");
     }
-    reset(tid);
+    reset(local_r_state);
   }
 
-  __device__ void reset(int tid) {
+  __device__ void reset(curandState *local_r_state) {
     printf("Reset begining\n");
     transitionIntervals = defaultTransitionIntervals;
     // print transition intervals length
@@ -135,7 +135,7 @@ struct CudaRunResult {
       printf("Intervals empty: %d\n", intervals.empty());
       if (!intervals.empty() && intervals.get(0).lower() == 0) {
         const CudaSMC::Distribution distribution = tapn.transitions[i]->distribution;
-        dates_sampled->set(i, distribution.sample(&rngStates[tid], numericPrecision));
+        dates_sampled->set(i, distribution.sample(local_r_state, numericPrecision));
       }
       // print check
       printf("Check %d: \n", i);
@@ -148,7 +148,7 @@ struct CudaRunResult {
     printf("Reset\n");
   }
 
-  __device__ void refreshTransitionsIntervals(int tid) {
+  __device__ void refreshTransitionsIntervals(curandState *local_r_state) {
     double max_delay = parent->availableDelay();
     CudaDynamicArray<Util::CudaInterval> invIntervals(10);
     invIntervals.add(Util::CudaInterval(0, max_delay));
@@ -172,7 +172,7 @@ struct CudaRunResult {
         dates_sampled->set(i, HUGE_VAL);
       } else if (newlyEnabled) {
         const auto distribution = tapn.transitions[i]->distribution;
-        double date = distribution.sample(&rngStates[tid], numericPrecision);
+        double date = distribution.sample(local_r_state, numericPrecision);
         // printf("Transition intervals inter size: %d\n", transitionIntervals.get(i).size);
         printf("Transition intervals get i 0.lower(): %d\n", transitionIntervals.get(i).get(0).lower());
         printf("Transition intervals get i 0.upper(): %d\n", transitionIntervals.get(i).get(0).upper());
@@ -187,8 +187,8 @@ struct CudaRunResult {
     parent->deadlocked = deadlocked;
   }
 
-  __device__ CudaRealMarking *next(int tid) {
-    auto [winner, delay] = getWinnerTransitionAndDelay(tid);
+  __device__ CudaRealMarking *next(curandState *local_r_state) {
+    auto [winner, delay] = getWinnerTransitionAndDelay(local_r_state);
 
     if (delay == HUGE_VAL) {
       // print delay is infinity
@@ -206,7 +206,7 @@ struct CudaRunResult {
       printf("Winner: %s\n", winner->name);
       totalSteps++;
       dates_sampled->set(winner->index, HUGE_VAL);
-      auto child = fire(winner, tid);
+      auto child = fire(winner, local_r_state);
       child->generatedBy = winner;
       delete parent;
       parent = child;
@@ -223,11 +223,11 @@ struct CudaRunResult {
       dates_sampled->set(i, newVal);
     }
 
-    refreshTransitionsIntervals(tid);
+    refreshTransitionsIntervals(local_r_state);
     return parent;
   }
 
-  __device__ CudaPair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(int tid) {
+  __device__ CudaPair<CudaTimedTransition *, double> getWinnerTransitionAndDelay(curandState *local_r_state) {
     CudaDynamicArray<size_t> winner_indexes(10);
     double date_min = HUGE_VAL;
     // print transition intervals length
@@ -273,12 +273,12 @@ struct CudaRunResult {
     } else if (winner_indexes.size == 1) {
       winner = tapn.transitions[winner_indexes.get(0)];
     } else {
-      winner = chooseWeightedWinner(winner_indexes, tid);
+      winner = chooseWeightedWinner(winner_indexes, local_r_state);
     }
     return makeCudaPair(winner, date_min);
   }
 
-  __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes, int tid) {
+  __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes, curandState *local_r_state) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
@@ -292,14 +292,14 @@ struct CudaRunResult {
     }
 
     if (!infinite_weights.empty()) {
-      int winner_index = CudaSMC::getRandomTokenIndex(&rngStates[tid], infinite_weights.size - 1);
+      int winner_index = CudaSMC::getRandomTokenIndex(local_r_state, infinite_weights.size - 1);
       return tapn.transitions[infinite_weights.get(winner_index)];
     }
     if (total_weight == 0) {
-      int winner_index = CudaSMC::getRandomTokenIndex(&rngStates[tid], winner_indexes.size - 1);
+      int winner_index = CudaSMC::getRandomTokenIndex(local_r_state, winner_indexes.size - 1);
       return tapn.transitions[winner_indexes.get(winner_index)];
     }
-    double winning_weight = CudaSMC::getRandomTokenIndex(&rngStates[tid], total_weight);
+    double winning_weight = CudaSMC::getRandomTokenIndex(local_r_state, total_weight);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
       CudaTimedTransition *transition = tapn.transitions[candidate];
@@ -414,12 +414,12 @@ struct CudaRunResult {
 
   __device__ CudaDynamicArray<CudaRealToken *> removeRandom(CudaDynamicArray<CudaRealToken *> tokenList,
                                                             const CudaTimeInterval &interval, const int weight,
-                                                            int tid) {
+                                                            curandState *local_r_state) {
     printf("Remove random method is being called\n");
     auto res = CudaDynamicArray<CudaRealToken *>(tokenList.size);
     int remaning = weight;
 
-    size_t tok_index = CudaSMC::getRandomTokenIndex(&rngStates[tid], tokenList.size);
+    size_t tok_index = CudaSMC::getRandomTokenIndex(local_r_state, tokenList.size);
     size_t tested = 0;
 
     while (remaning > 0 && tested < tokenList.size) {
@@ -432,7 +432,7 @@ struct CudaRunResult {
           tokenList.remove(tok_index);
         }
         if (remaning > 0) {
-          tok_index = CudaSMC::getRandomTokenIndex(&rngStates[tid], tokenList.size);
+          tok_index = CudaSMC::getRandomTokenIndex(local_r_state, tokenList.size);
           tested = 0;
         }
       } else {
@@ -504,7 +504,7 @@ struct CudaRunResult {
     return res;
   }
 
-  __device__ CudaRealMarking *fire(CudaTimedTransition *transition, int tid) {
+  __device__ CudaRealMarking *fire(CudaTimedTransition *transition, curandState *local_r_state) {
     if (transition == nullptr) {
       assert(false);
       return nullptr;
@@ -519,7 +519,7 @@ struct CudaRunResult {
       CudaDynamicArray<CudaRealToken *> *&tokenList = place.tokens;
       switch (transition->_firingMode) {
       case CudaSMC::FiringMode::Random:
-        removeRandom(*tokenList, input->interval, input->weight, tid);
+        removeRandom(*tokenList, input->interval, input->weight, local_r_state);
         break;
       case CudaSMC::FiringMode::Oldest:
         removeOldest(*tokenList, input->interval, input->weight);
@@ -543,7 +543,7 @@ struct CudaRunResult {
         if (destInv < arcInterval.upperBound) arcInterval.setUpperBound(destInv, false);
         switch (transition->_firingMode) {
         case CudaSMC::FiringMode::Random:
-          consumed = removeRandom(*tokenList, arcInterval, transport->weight, tid);
+          consumed = removeRandom(*tokenList, arcInterval, transport->weight, local_r_state);
           break;
         case CudaSMC::FiringMode::Oldest:
           consumed = removeOldest(*tokenList, arcInterval, transport->weight);
