@@ -25,7 +25,7 @@ struct CudaRunResult {
   bool maximal = false;
   CudaTimedArcPetriNet *tapn;
   CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>> defaultTransitionIntervals;
-  CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>> transitionIntervals;
+  CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>> *transitionIntervals;
   CudaDynamicArray<double> *dates_sampled;
   CudaDynamicArray<uint32_t> transitionsStatistics;
   CudaRealMarking *origin = nullptr;
@@ -41,8 +41,8 @@ struct CudaRunResult {
   __host__ __device__ CudaRunResult() {}
 
   __host__ __device__ CudaRunResult(CudaTimedArcPetriNet *tapn)
-      : tapn(tapn), defaultTransitionIntervals(tapn->transitionsLength), transitionIntervals(tapn->transitionsLength),
-        numericPrecision(numericPrecision) {
+      : tapn(tapn), defaultTransitionIntervals(tapn->transitionsLength), numericPrecision(numericPrecision) {
+    transitionIntervals = new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>>(tapn->transitionsLength);
   }
 
   // Change this to cuda if needed
@@ -109,15 +109,15 @@ struct CudaRunResult {
 
   __device__ void reset(curandState *local_r_state) {
     printf("Reset begining\n");
-    transitionIntervals = defaultTransitionIntervals;
+    // transitionIntervals = defaultTransitionIntervals;
     // print transition intervals length
 
-    dates_sampled = new CudaDynamicArray<double>(transitionIntervals.size);
+    dates_sampled = new CudaDynamicArray<double>(transitionIntervals->size);
 
     printf("Reset begining 2\n");
     // print dates sampled length
     printf("Dates sampled length: %d\n", dates_sampled->capacity);
-    for (size_t i = 0; i < transitionIntervals.size; i++) {
+    for (size_t i = 0; i < transitionIntervals->size; i++) {
       dates_sampled->add(HUGE_VAL);
     }
     // print old dates sampled length
@@ -128,7 +128,7 @@ struct CudaRunResult {
     bool deadlock = true;
     for (size_t i = 0; i < dates_sampled->size; i++) {
       printf("Before %d: \n", i);
-      auto intervals = transitionIntervals.get(i);
+      auto intervals = transitionIntervals->get(i);
       // print intervals length
       printf("Intervals length: %d\n", intervals.size);
       // print if intervals is empty
@@ -139,8 +139,8 @@ struct CudaRunResult {
       }
       // print check
       printf("Check %d: \n", i);
-      deadlock &= transitionIntervals.get(i).empty() ||
-                  (transitionIntervals.get(i).size == 0 && transitionIntervals.get(i).get(0).lower() == 0 &&
+      deadlock &= transitionIntervals->get(i).empty() ||
+                  (transitionIntervals->get(i).size == 0 && transitionIntervals->get(i).get(0).lower() == 0 &&
                    dates_sampled->get(i) == 0);
     }
 
@@ -158,30 +158,30 @@ struct CudaRunResult {
       auto transition = tapn->transitions[i];
       int index = transition->index;
       if (transition->getPresetSize() == 0 && transition->inhibitorArcsLength == 0) {
-        transitionIntervals.set(index, invIntervals);
+        transitionIntervals->set(index, invIntervals);
       } else {
         CudaDynamicArray<Util::CudaInterval> firingDates = transitionFiringDates(*transition);
-        transitionIntervals.set(i, Util::setIntersection(firingDates, invIntervals));
+        transitionIntervals->set(i, Util::setIntersection(firingDates, invIntervals));
       }
-      printf("Transition intervals inter size: %d\n", transitionIntervals.get(i).size);
-      bool enabled = (!transitionIntervals.get(i).empty()) && (transitionIntervals.get(i).get(0).lower() == 0);
+      printf("Transition intervals inter size: %d\n", transitionIntervals->get(i).size);
+      bool enabled = (!transitionIntervals->get(i).empty()) && (transitionIntervals->get(i).get(0).lower() == 0);
       bool newlyEnabled = enabled && (dates_sampled->get(i) == HUGE_VAL);
       bool reachedUpper =
-          enabled && !newlyEnabled && (transitionIntervals.get(i).get(0).upper() == 0) && (dates_sampled->get(i) > 0);
+          enabled && !newlyEnabled && (transitionIntervals->get(i).get(0).upper() == 0) && (dates_sampled->get(i) > 0);
       if (!enabled || reachedUpper) {
         dates_sampled->set(i, HUGE_VAL);
       } else if (newlyEnabled) {
         const auto distribution = tapn->transitions[i]->distribution;
         double date = distribution.sample(local_r_state, numericPrecision);
-        // printf("Transition intervals inter size: %d\n", transitionIntervals.get(i).size);
-        printf("Transition intervals get i 0.lower(): %d\n", transitionIntervals.get(i).get(0).lower());
-        printf("Transition intervals get i 0.upper(): %d\n", transitionIntervals.get(i).get(0).upper());
-        if (transitionIntervals.get(i).get(0).upper() > 0 || date == 0) {
+        // printf("Transition intervals inter size: %d\n", transitionIntervals->get(i).size);
+        printf("Transition intervals get i 0.lower(): %d\n", transitionIntervals->get(i).get(0).lower());
+        printf("Transition intervals get i 0.upper(): %d\n", transitionIntervals->get(i).get(0).upper());
+        if (transitionIntervals->get(i).get(0).upper() > 0 || date == 0) {
           dates_sampled->set(i, date);
         }
       }
-      deadlocked &= transitionIntervals.get(i).empty() ||
-                    (transitionIntervals.get(i).size == 1 && transitionIntervals.get(i).get(0).lower() == 0 &&
+      deadlocked &= transitionIntervals->get(i).empty() ||
+                    (transitionIntervals->get(i).size == 1 && transitionIntervals->get(i).get(0).lower() == 0 &&
                      dates_sampled->get(i) > 0);
     }
     parent->deadlocked = deadlocked;
@@ -212,7 +212,7 @@ struct CudaRunResult {
       parent = child;
     }
 
-    for (size_t i = 0; i < transitionIntervals.size; i++) {
+    for (size_t i = 0; i < transitionIntervals->size; i++) {
       double date = dates_sampled->get(i);
       double newVal = (date == HUGE_VAL) ? HUGE_VAL : date - delay;
 
@@ -231,10 +231,10 @@ struct CudaRunResult {
     CudaDynamicArray<size_t> winner_indexes(10);
     double date_min = HUGE_VAL;
     // print transition intervals length
-    printf("Transition intervals length: %d\n", transitionIntervals.size);
+    printf("Transition intervals length: %d\n", transitionIntervals->size);
 
-    for (size_t i = 0; i < transitionIntervals.size; i++) {
-      auto intervals = transitionIntervals.get(i);
+    for (size_t i = 0; i < transitionIntervals->size; i++) {
+      auto intervals = transitionIntervals->get(i);
       printf("Intervals length: %d\n", intervals.size);
       if (intervals.empty()) continue;
       double date = HUGE_VAL;
@@ -278,7 +278,8 @@ struct CudaRunResult {
     return makeCudaPair(winner, date_min);
   }
 
-  __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes, curandState *local_r_state) {
+  __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
+                                                       curandState *local_r_state) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
@@ -332,7 +333,7 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      CudaRealPlace* place = parent->places[arc->inputPlace->index];
+      CudaRealPlace *place = parent->places[arc->inputPlace->index];
 
       printf("Preset arc\n");
       printf("place name: %s\n", place->place->name);

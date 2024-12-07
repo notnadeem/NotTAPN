@@ -1,10 +1,10 @@
 #ifndef RUNRESULTALLOCATOR_CUH_
 #define RUNRESULTALLOCATOR_CUH_
 
+#include "DiscreteVerification/Alloc/CudaPetriNetAllocator.cuh"
 #include "DiscreteVerification/Alloc/RealMarkingAllocator.cuh"
 #include "DiscreteVerification/Cuda/CudaInterval.cuh"
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
-#include "DiscreteVerification/Alloc/CudaPetriNetAllocator.cuh"
 
 #include <cuda_runtime.h>
 namespace VerifyTAPN::Alloc {
@@ -13,7 +13,7 @@ using namespace Cuda;
 using namespace Util;
 
 struct RunResultAllocator {
-  __host__ static std::pair<CudaRunResult*, CudaRealMarking*>*
+  __host__ static std::pair<CudaRunResult *, CudaRealMarking *> *
   allocate(CudaRunResult *h_run_result, CudaRealMarking *h_marking, int blocks, int threadsPerBlock) {
     int numThreads = blocks * threadsPerBlock;
 
@@ -26,34 +26,53 @@ struct RunResultAllocator {
 
     CudaRunResult *temp_run_result = (CudaRunResult *)malloc(sizeof(CudaRunResult));
 
-    //Allocate petri net
+    // Allocate petri net
     CudaPetriNetAllocator petriNetAllocator;
     CudaTimedArcPetriNet *d_tapn = petriNetAllocator.cuda_allocator(h_run_result->tapn);
-    // CudaTimedArcPetriNet *temp_tapn = (CudaTimedArcPetriNet *)malloc(sizeof(CudaTimedArcPetriNet));
 
-    // cudaMemcpy(temp_real_places, d_real_places, sizeof(CudaRealMarking **), cudaMemcpyDeviceToHost);
-    // cudaMemcpy(temp_tapn, d_tapn, sizeof(CudaTimedArcPetriNet), cudaMemcpyDeviceToHost);
-    
     temp_run_result->tapn = d_tapn;
-    
+
     RealMarkingAllocator realMarkingAllocator;
 
-    temp_run_result->dates_sampled = h_run_result->dates_sampled;
-    temp_run_result->transitionsStatistics = h_run_result->transitionsStatistics;
+    CudaRealMarking *d_cmarking = realMarkingAllocator.allocate_real_marking(
+        h_marking, petriNetAllocator.transition_map, petriNetAllocator.place_map);
 
-    CudaRealMarking *d_cmarking = realMarkingAllocator.allocate_real_marking(h_marking, petriNetAllocator.transition_map, petriNetAllocator.place_map);
-    // temp_run_result->origin =
-    //     realMarkingAllocator.allocate_real_marking(h_marking, petriNetAllocator.transition_map, petriNetAllocator.place_map);
+    // Allocate all the dynamic arrays
+    if(h_run_result->dates_sampled != nullptr) {
+      CudaDynamicArray<double> *d_dates;
+    cudaMalloc(&d_dates, sizeof(CudaDynamicArray<double>));
 
-    temp_run_result->defaultTransitionIntervals = h_run_result->defaultTransitionIntervals;
-    temp_run_result->transitionIntervals = h_run_result->transitionIntervals;
+    CudaDynamicArray<double>* temp_d_dates = (CudaDynamicArray<double>*)malloc(sizeof(CudaDynamicArray<double>));
+
+    double *d_dates_arr;
+    cudaMalloc(&d_dates_arr, sizeof(double *) * h_run_result->dates_sampled->capacity);
+
+    double *temp_dates_arr = (double *)malloc(sizeof(double *) * h_run_result->dates_sampled->capacity);
+
+    for (int i = 0; i < h_run_result->dates_sampled->size; i++) {
+      temp_dates_arr[i] = h_run_result->dates_sampled->get(i);
+    }
+
+    cudaMemcpy(d_dates_arr, temp_dates_arr, sizeof(double *) * h_run_result->dates_sampled->capacity,
+               cudaMemcpyHostToDevice);
+
+    temp_d_dates->arr = d_dates_arr;
+    temp_d_dates->ownsArray = h_run_result->dates_sampled->ownsArray;
+    temp_d_dates->size = h_run_result->dates_sampled->size;
+    temp_d_dates->capacity = h_run_result->dates_sampled->capacity;
+
+    cudaMemcpy(d_dates, temp_d_dates, sizeof(CudaDynamicArray<double>), cudaMemcpyHostToDevice);
+
+    temp_run_result->dates_sampled = d_dates;
+    }
+
+    //Allocate transition intervals 2d array - for now skipping this as it's always empty array
 
     // Copy CudaRunResult from host to device
     cudaMemcpy(runResultDevice, temp_run_result, sizeof(CudaRunResult), cudaMemcpyHostToDevice);
 
     free(temp_run_result);
-    auto result = new std::pair<CudaRunResult*, CudaRealMarking*>(
-        runResultDevice, d_cmarking);
+    auto result = new std::pair<CudaRunResult *, CudaRealMarking *>(runResultDevice, d_cmarking);
 
     return result;
   };
