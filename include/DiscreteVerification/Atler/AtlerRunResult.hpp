@@ -669,20 +669,20 @@ struct AtlerRunResult {
 
 struct AtlerRunResult2 {
   bool maximal = false;
-  SimpleTimedArcPetriNet stapn;
+  SimpleTimedArcPetriNet* stapn;
   SimpleDynamicArray<SimpleDynamicArray<Util::SimpleInterval> *>
       *transitionIntervals;
   SimpleDynamicArray<double> *datesSampled;
-  SimpleRealMarking realMarking;
+  SimpleRealMarking *realMarking;
   double totalTime = 0;
   int totalSteps = 0;
 
   uint numericPrecision = 0;
   std::ranlux48 rng;
 
-  AtlerRunResult2(SimpleTimedArcPetriNet stapn, SimpleRealMarking srm,
+  AtlerRunResult2(SimpleTimedArcPetriNet *stapn, SimpleRealMarking* srm,
                   const unsigned int numericPrecision = 0)
-      : stapn(stapn), realMarking(srm), numericPrecision(numericPrecision) {
+      : stapn(stapn), realMarking(new SimpleRealMarking(*srm)), numericPrecision(numericPrecision) {
 
     // RNG setup
     std::random_device rd;
@@ -691,9 +691,28 @@ struct AtlerRunResult2 {
     // Initialize transition intervals
     transitionIntervals =
         new SimpleDynamicArray<SimpleDynamicArray<Util::SimpleInterval> *>(
-            stapn.transitionsLength);
+            stapn->transitionsLength);
 
     prepare();
+  }
+
+  AtlerRunResult2(const AtlerRunResult2 &other) {
+      // set base properties
+      stapn = new SimpleTimedArcPetriNet(*other.stapn);
+      numericPrecision = other.numericPrecision;
+
+      transitionIntervals = new SimpleDynamicArray<SimpleDynamicArray<Util::SimpleInterval> *>(other.transitionIntervals->size);
+      for (size_t i = 0; i < other.transitionIntervals->size; i++) {
+        transitionIntervals->add(new SimpleDynamicArray<Util::SimpleInterval>(*other.transitionIntervals->get(i)));
+      }
+      realMarking = new SimpleRealMarking(*other.realMarking);
+
+      // random number generator
+      std::random_device rd;
+      rng = std::ranlux48(rd());
+
+      // run reset
+      reset();
   }
 
   ~AtlerRunResult2() {
@@ -702,17 +721,18 @@ struct AtlerRunResult2 {
     }
     delete transitionIntervals;
     delete datesSampled;
+    delete realMarking;
+    delete stapn;
   }
 
-  // private: (fix this later)
   void prepare() {
-    double originMaxDelay = realMarking.availableDelay();
+    double originMaxDelay = realMarking->availableDelay();
 
     auto invIntervals = SimpleDynamicArray<Util::SimpleInterval>(10);
     invIntervals.add(Util::SimpleInterval(0, originMaxDelay));
 
-    for (size_t i = 0; i < stapn.transitionsLength; i++) {
-      auto *transition = stapn.transitions[i];
+    for (size_t i = 0; i < stapn->transitionsLength; i++) {
+      auto *transition = stapn->transitions[i];
       if (transition->getPresetSize() == 0 && transition->inhibitorArcs == 0) {
         transitionIntervals->add(
             new SimpleDynamicArray<Util::SimpleInterval>(invIntervals));
@@ -726,10 +746,6 @@ struct AtlerRunResult2 {
             new SimpleDynamicArray<Util::SimpleInterval>(intersection));
       }
     }
-    std::cout << "stapn transitions length: " << stapn.transitionsLength
-              << std::endl;
-    std::cout << "transition intervals length: " << transitionIntervals->size
-              << std::endl;
     reset();
   }
 
@@ -744,7 +760,7 @@ struct AtlerRunResult2 {
       auto *intervals = transitionIntervals->get(i);
       if (!intervals->empty() && intervals->get(0).lower() == 0) {
         const SimpleSMC::Distribution distribution =
-            stapn.transitions[i]->distribution;
+            stapn->transitions[i]->distribution;
         datesSampled->set(i, distribution.sample(rng, numericPrecision));
       }
       deadlock &= transitionIntervals->get(i)->empty() ||
@@ -753,7 +769,7 @@ struct AtlerRunResult2 {
                    datesSampled->get(i) == 0);
     }
 
-    realMarking.deadlocked = deadlock;
+    realMarking->deadlocked = deadlock;
   }
 
   // next function
@@ -767,7 +783,7 @@ struct AtlerRunResult2 {
       return false;
     }
 
-    realMarking.deltaAge(delay);
+    realMarking->deltaAge(delay);
     totalTime += delay;
 
     if (winner != nullptr) {
@@ -790,13 +806,13 @@ struct AtlerRunResult2 {
 
   // refresh intervals
   void refreshTransitionsIntervals() {
-    double max_delay = realMarking.availableDelay();
+    double max_delay = realMarking->availableDelay();
     auto invIntervals = SimpleDynamicArray<Util::SimpleInterval>(10);
     invIntervals.add(Util::SimpleInterval(0, max_delay));
     bool deadlocked = true;
 
-    for (size_t i = 0; i < stapn.transitionsLength; i++) {
-      auto *transition = stapn.transitions[i];
+    for (size_t i = 0; i < stapn->transitionsLength; i++) {
+      auto *transition = stapn->transitions[i];
       int index = transition->index;
       if (transition->getPresetSize() == 0 &&
           transition->inhibitorArcsLength == 0) {
@@ -826,7 +842,7 @@ struct AtlerRunResult2 {
       if (!enabled || reachedUpper) {
         datesSampled->set(i, std::numeric_limits<double>::infinity());
       } else if (newlyEnabled) {
-        const auto distribution = stapn.transitions[i]->distribution;
+        const auto distribution = stapn->transitions[i]->distribution;
         double date = distribution.sample(rng, numericPrecision);
         // print transitionIntervals.get(i).get(0)
         if (transitionIntervals->get(i)->get(0).upper() > 0 || date == 0) {
@@ -839,7 +855,7 @@ struct AtlerRunResult2 {
                      datesSampled->get(i) > 0);
     }
 
-    realMarking.deadlocked = deadlocked;
+    realMarking->deadlocked = deadlocked;
   }
 
   // get winner transtion
@@ -878,7 +894,7 @@ struct AtlerRunResult2 {
     if (winner_indexes.empty()) {
       winner = nullptr;
     } else if (winner_indexes.size == 1) {
-      winner = stapn.transitions[winner_indexes.get(0)];
+      winner = stapn->transitions[winner_indexes.get(0)];
     } else {
       winner = chooseWeightedWinner(winner_indexes);
     }
@@ -892,7 +908,7 @@ struct AtlerRunResult2 {
     SimpleDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
-      double priority = stapn.transitions[candidate]->_weight;
+      double priority = stapn->transitions[candidate]->_weight;
       if (priority == std::numeric_limits<double>::infinity()) {
         infinite_weights.add(candidate);
       } else {
@@ -903,25 +919,25 @@ struct AtlerRunResult2 {
     if (!infinite_weights.empty()) {
       int winner_index =
           std::uniform_int_distribution<>(0, infinite_weights.size - 1)(rng);
-      return stapn.transitions[infinite_weights.get(winner_index)];
+      return stapn->transitions[infinite_weights.get(winner_index)];
     }
     if (total_weight == 0) {
       int winner_index =
           std::uniform_int_distribution<>(0, winner_indexes.size - 1)(rng);
-      return stapn.transitions[winner_indexes.get(winner_index)];
+      return stapn->transitions[winner_indexes.get(winner_index)];
     }
     double winning_weight =
         std::uniform_real_distribution<>(0.0, total_weight)(rng);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
-      SimpleTimedTransition *transition = stapn.transitions[candidate];
+      SimpleTimedTransition *transition = stapn->transitions[candidate];
       winning_weight -= transition->_weight;
       if (winning_weight <= 0) {
         return transition;
       }
     }
 
-    return stapn.transitions[winner_indexes.get(0)];
+    return stapn->transitions[winner_indexes.get(0)];
   }
 
   SimpleDynamicArray<Util::SimpleInterval>
@@ -940,7 +956,7 @@ struct AtlerRunResult2 {
     // for each inhibitor arc
     for (size_t i = 0; i < transition.inhibitorArcsLength; i++) {
       auto inhib = transition.inhibitorArcs[i];
-      if (realMarking.numberOfTokensInPlace(inhib->inputPlace.index) >=
+      if (realMarking->numberOfTokensInPlace(inhib->inputPlace.index) >=
           inhib->weight) {
         return SimpleDynamicArray(disabled);
       }
@@ -948,7 +964,7 @@ struct AtlerRunResult2 {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      SimpleRealPlace *place = realMarking.places[arc->inputPlace.index];
+      SimpleRealPlace *place = realMarking->places[arc->inputPlace.index];
       if (place->isEmpty()) {
         return SimpleDynamicArray(disabled);
       }
@@ -965,7 +981,7 @@ struct AtlerRunResult2 {
 
     for (size_t i = 0; i < transition.transportArcsLength; i++) {
       SimpleTimedTransportArc *transport = transition.transportArcs[i];
-      auto place = realMarking.places[transport->source.index];
+      auto place = realMarking->places[transport->source.index];
 
       if (place->isEmpty()) {
         return SimpleDynamicArray(disabled);
@@ -1137,7 +1153,7 @@ struct AtlerRunResult2 {
       return false;
     }
 
-    SimpleRealPlace **placeList = realMarking.places;
+    SimpleRealPlace **placeList = realMarking->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       SimpleTimedInputArc *input = transition->preset[i];
@@ -1196,8 +1212,6 @@ struct AtlerRunResult2 {
 
       for (size_t j = 0; j < consumed.size; j++) {
         auto con = consumed.get(j);
-        std::cout << "Consumed age: " << con.age << std::endl;
-        std::cout << "Consumed count: " << con.count << std::endl;
         toCreate.add(std::make_pair(&(transport->destination),
                                     SimpleRealToken{con.age, con.count}));
       }
@@ -1206,13 +1220,13 @@ struct AtlerRunResult2 {
     for (size_t i = 0; i < transition->postsetLength; i++) {
       SimpleTimedPlace *place = transition->postset[i]->outputPlace;
       SimpleTimedOutputArc *post = transition->postset[i];
-      auto token = new SimpleRealToken{.age = 0.0,
+      auto token = SimpleRealToken{.age = 0.0,
                                        .count = static_cast<int>(post->weight)};
-      realMarking.addTokenInPlace(*place, *token);
+      realMarking->addTokenInPlace(*place, token);
     }
     for (size_t i = 0; i < toCreate.size; i++) {
       auto [place, token] = toCreate.get(i);
-      realMarking.addTokenInPlace(*place, token);
+      realMarking->addTokenInPlace(*place, token);
     }
 
     return true;

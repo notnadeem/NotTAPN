@@ -48,10 +48,11 @@ bool AtlerProbabilityEstimation::run() {
   int count = 0;
   int success = 0;
   // for runsNeeded timed
+  Atler::AtlerRunResult2 *original = new Atler::AtlerRunResult2(&stapn, siMarking);
   for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(stapn, *siMarking);
+    Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(*original);
     while (!res->maximal && !(reachedRunBound2(res))) {
-      Atler::SimpleQueryVisitor checker(res->realMarking, stapn);
+      Atler::SimpleQueryVisitor checker(*res->realMarking, stapn);
       Atler::AST::BoolResult result;
 
       simpleSMCQuery->accept(checker, result);
