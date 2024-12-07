@@ -17,7 +17,7 @@ namespace Cuda {
 
 class CudaTAPNConverter {
 public:
-  static std::pair<CudaTimedArcPetriNet, CudaRealMarking> *
+  static std::pair<CudaTimedArcPetriNet, CudaRealMarking*> *
   convert(const TAPN::TimedArcPetriNet &tapn,
           DiscreteVerification::RealMarking &marking) {
     std::unordered_map<const TAPN::TimedPlace *, CudaTimedPlace *> placeMap;
@@ -212,43 +212,43 @@ public:
 
     // Create and return new CudaRealMarking
     std::cout << "Converting Marking..." << std::endl;
-    CudaRealMarking srm(marking.getPlaceList().size());
-    srm.deadlocked = marking.canDeadlock(tapn, false);
-    srm.fromDelay = marking.getPreviousDelay();
-    srm.generatedBy = marking.getGeneratedBy() != nullptr
-                          ? transitionMap.at(marking.getGeneratedBy())
-                          : nullptr;
+
+
+    auto srm = new CudaRealMarking();
+    srm->placesLength = marking.getPlaceList().size();
+    srm->places = new CudaRealPlace*[srm->placesLength];
+    srm->deadlocked = marking.canDeadlock(tapn, false);
+    // srm.fromDelay = marking.getPreviousDelay();
+    // srm.generatedBy = marking.getGeneratedBy() != nullptr
+    //                       ? transitionMap.at(marking.getGeneratedBy())
+                          // : nullptr;
 
     // Initialize CudaRealPlace array with mapped places
     std::cout << "Converting Places..." << std::endl;
     auto placeLength = marking.getPlaceList().size();
-    srm.places = (CudaRealPlace **)malloc(sizeof(CudaRealPlace *) * placeLength);
     for (size_t i = 0; i < placeLength; i++) {
-      srm.places[i] = (CudaRealPlace *)malloc(sizeof(CudaRealPlace));
-      // srm.places[i]->tokens = (CudaDynamicArray<CudaRealToken*>*)malloc(sizeof(CudaDynamicArray<CudaRealToken*>));
-      // srm.places[i]->tokens->CudaDynamicArray();
-      srm.places[i]->tokens = new CudaDynamicArray<CudaRealToken *>();
       DiscreteVerification::RealPlace &realPlace = marking.getPlaceList()[i];
-     
+
       // Get mapped place
       auto cudaPlace = placeMap.at(realPlace.place);
+
+      // Set new place
+      srm->places[i] = new CudaRealPlace();
 
       // Create and initialize CudaRealToken array with converted tokens
       size_t tokenLength = realPlace.tokens.size();
       for (size_t j = 0; j < tokenLength; j++) {
           //print token count
           std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
-        CudaRealToken *token = (CudaRealToken *)malloc(sizeof(CudaRealToken));
-        token->count = realPlace.tokens[j].getCount();
-        token->age = realPlace.tokens[j].getAge();
-        srm.places[i]->tokens->add(token);
+        srm->places[i]->tokens->add(new CudaRealToken{
+            realPlace.tokens[j].getAge(),realPlace.tokens[j].getCount()});
       }
 
       // Set CudaRealPlace fields
-      srm.places[i]->place = cudaPlace;
+      srm->places[i]->place = cudaPlace;
     }
 
-    auto result = new std::pair<CudaTimedArcPetriNet, CudaRealMarking>(
+    auto result = new std::pair<CudaTimedArcPetriNet, CudaRealMarking*>(
         *cudaTapn, srm);
     return result;
   }
@@ -258,9 +258,7 @@ private:
     CudaTimedPlace cudaPlace;
     cudaPlace.index = place.getIndex();
     cudaPlace.name = place.getName().c_str();
-    cudaPlace.nameLength = place.getName().size();
     cudaPlace.id = place.getId().c_str();
-    cudaPlace.idLength = place.getId().size();
     cudaPlace.type = convertPlaceType(place.getType());
     cudaPlace.timeInvariant = convertTimeInvariant(place.getInvariant());
     cudaPlace.untimed = place.isUntimed();
@@ -275,10 +273,7 @@ private:
     CudaTimedTransition cudaTransition;
     cudaTransition.index = transition.getIndex();
     cudaTransition.name = transition.getName().c_str();
-    cudaTransition.nameLength = transition.getName().size();
     cudaTransition.id = transition.getId().c_str();
-    cudaTransition.idLength = transition.getId().size();
-    
     cudaTransition.untimedPostset = transition.hasUntimedPostset();
     cudaTransition.urgent = transition.isUrgent();
     cudaTransition.controllable = transition.isControllable();
@@ -355,6 +350,7 @@ private:
 
   static Atler::SimpleTimeInvariant
   convertTimeInvariant(const TAPN::TimeInvariant &invariant) {
+      //print the invariant
     return {invariant.isBoundStrict(), invariant.getBound()};
   }
 

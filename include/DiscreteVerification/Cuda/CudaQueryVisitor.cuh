@@ -166,7 +166,7 @@ __host__ __device__ void CudaQueryVisitor::visit(AST::CudaQuery &query, AST::Res
       query.getQuantifier() == AST::PG) {
     static_cast<AST::BoolResult &>(context).value = !static_cast<AST::BoolResult &>(context).value;
   }
-  query.eval = static_cast<AST::IntResult &>(context).value;
+  query.eval = static_cast<AST::BoolResult &>(context).value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::DeadlockExpression &expr, AST::Result &context) {

@@ -69,18 +69,18 @@ __host__ __device__ CudaInterval hull(const CudaInterval &l, const CudaInterval 
   return CudaInterval(fmin(l.low, r.low), fmax(l.high, r.high));
 }
 
-__host__ __device__ bool overlap(const CudaInterval &l, const CudaInterval r) {
+__host__ __device__ inline bool overlap(const CudaInterval &l, const CudaInterval r) {
   auto i = intersect(l, r);
   return !i.empty();
 }
 
 // Fix both setAdd and setIntersection later
-__host__ __device__ void setAdd(CudaDynamicArray<CudaInterval> &first, const CudaInterval &element) {
+__host__ __device__ inline void setAdd(CudaDynamicArray<CudaInterval> &first, const CudaInterval &element) {
   for (unsigned int i = 0; i < first.size; i++) {
 
     if (element.upper() < first.get(i).lower()) {
       // Add element
-      first.insert(i, element);
+      first.insert2(i, element);
       return;
     } else if (overlap(element, first.get(i))) {
       CudaInterval u = hull(element, first.get(i));
@@ -103,9 +103,9 @@ __host__ __device__ void setAdd(CudaDynamicArray<CudaInterval> &first, const Cud
   first.add(element);
 }
 
-__host__ __device__ CudaDynamicArray<CudaInterval> setIntersection(CudaDynamicArray<CudaInterval> first,
-                                                                       CudaDynamicArray<CudaInterval> second) {
-  CudaDynamicArray<CudaInterval> result;
+__host__ __device__ inline CudaDynamicArray<CudaInterval> setIntersection(const CudaDynamicArray<CudaInterval>& first,
+                                                                      const CudaDynamicArray<CudaInterval>& second) {
+  CudaDynamicArray<CudaInterval> result = CudaDynamicArray<CudaInterval>(first.size + second.size);
 
   if (first.empty() || second.empty()) {
     return result;
@@ -131,7 +131,7 @@ __host__ __device__ CudaDynamicArray<CudaInterval> setIntersection(CudaDynamicAr
       j++;
     }
   }
-  return result;
+  return CudaDynamicArray<CudaInterval>(result);
 }
 
 } /* namespace Util */

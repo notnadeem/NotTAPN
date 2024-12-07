@@ -16,46 +16,46 @@ using namespace VerifyTAPN::Alloc;
 //For now single kernel execution per run needed
 //Since every run can have different execution time could be nice to try running multiple runs per kernel to improve warp utilization
 
-__global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
-                                    Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
-                                    int *stepBound, int *successCount, int *runsNeeded, curandState *states, int *rand_seed) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int runNeed = *runsNeeded;
-  if (tid >= runNeed) return;
+// __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
+//                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
+//                                     int *stepBound, int *successCount, int *runsNeeded, curandState *states, int *rand_seed) {
+//   int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//   int runNeed = *runsNeeded;
+//   if (tid >= runNeed) return;
 
-  curand_init(*rand_seed, tid, 0, &states[tid]);
+//   curand_init(*rand_seed, tid, 0, &states[tid]);
 
-  // Copy global state to local memory for faster access
-  curandState local_r_state = states[tid];
+//   // Copy global state to local memory for faster access
+//   curandState local_r_state = states[tid];
 
-  if (tid % 1000 == 0) {
-    printf("Thread %d initialized\n", tid);
-  }
+//   if (tid % 1000 == 0) {
+//     printf("Thread %d initialized\n", tid);
+//   }
 
-  int tBound = *timeBound;
-  int sBound = *stepBound;
+//   int tBound = *timeBound;
+//   int sBound = *stepBound;
 
-  Cuda::CudaTimedArcPetriNet tapn = *ctapn;
+//   Cuda::CudaTimedArcPetriNet tapn = *ctapn;
 
-  // TODO prepare per thread
-  // runner.prepare(initialMarking);
-  Cuda::CudaRealMarking *newMarking = runner->parent;
+//   // TODO prepare per thread
+//   // runner.prepare(initialMarking);
+//   Cuda::CudaRealMarking *newMarking = runner->parent;
 
-  while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
+//   while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
 
-    Cuda::CudaRealMarking *child = newMarking->clone();
-    Cuda::CudaQueryVisitor checker(*child, tapn);
-    Cuda::AST::BoolResult result;
+//     Cuda::CudaRealMarking *child = newMarking->clone();
+//     Cuda::CudaQueryVisitor checker(*child, tapn);
+//     Cuda::AST::BoolResult result;
 
-    query->accept(checker, result);
+//     query->accept(checker, result);
 
-    if (result.value) {
-      atomicAdd(successCount, 1);
-      break;
-    }
-    newMarking = runner->next(&local_r_state);
-  }
-}
+//     if (result.value) {
+//       atomicAdd(successCount, 1);
+//       break;
+//     }
+//     newMarking = runner->next(&local_r_state);
+//   }
+// }
 
 __global__ void testAllocationKernel(CudaRunResult *runner,
                                      CudaRealMarking *marking, u_int *runNeed) {
@@ -173,7 +173,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Converting TAPN and marking..." << std::endl;
   auto result = VerifyTAPN::Cuda::CudaTAPNConverter::convert(tapn, initialMarking);
   VerifyTAPN::Cuda::CudaTimedArcPetriNet ctapn = result->first;
-  VerifyTAPN::Cuda::CudaRealMarking ciMarking = result->second;
+  VerifyTAPN::Cuda::CudaRealMarking *cipMarking = result->second;
 
   std::cout << "Converting Query..." << std::endl;
   SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
@@ -196,15 +196,20 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Threads per block..." << threadsPerBlock << std::endl;
   std::cout << "Blocks..." << blocks << std::endl;
 
-  auto runres = CudaRunResult(&ctapn);
+  CudaTimedArcPetriNet *cptapn = &ctapn;
+  CudaRealMarking ciMarking = *cipMarking;
 
-  auto runner = new CudaRunResult(&ctapn);
+  auto runres = CudaRunResult(cptapn, ciMarking);
+
+
+
+  auto runner = new CudaRunResult(cptapn, ciMarking);
 
   // Allocate the run result
   
   RunResultAllocator allocator;
 
-  auto allocResult = allocator.allocate(runner, &ciMarking, blocks, threadsPerBlock);
+  auto allocResult = allocator.allocate(runner, cipMarking, blocks, threadsPerBlock);
 
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;

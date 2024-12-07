@@ -38,32 +38,32 @@ struct RunResultAllocator {
         h_marking, petriNetAllocator.transition_map, petriNetAllocator.place_map);
 
     // Allocate all the dynamic arrays
-    if(h_run_result->dates_sampled != nullptr) {
+    if(h_run_result->datesSampled != nullptr) {
       CudaDynamicArray<double> *d_dates;
     cudaMalloc(&d_dates, sizeof(CudaDynamicArray<double>));
 
     CudaDynamicArray<double>* temp_d_dates = (CudaDynamicArray<double>*)malloc(sizeof(CudaDynamicArray<double>));
 
     double *d_dates_arr;
-    cudaMalloc(&d_dates_arr, sizeof(double *) * h_run_result->dates_sampled->capacity);
+    cudaMalloc(&d_dates_arr, sizeof(double *) * h_run_result->datesSampled->capacity);
 
-    double *temp_dates_arr = (double *)malloc(sizeof(double *) * h_run_result->dates_sampled->capacity);
+    double *temp_dates_arr = (double *)malloc(sizeof(double *) * h_run_result->datesSampled->capacity);
 
-    for (int i = 0; i < h_run_result->dates_sampled->size; i++) {
-      temp_dates_arr[i] = h_run_result->dates_sampled->get(i);
+    for (int i = 0; i < h_run_result->datesSampled->size; i++) {
+      temp_dates_arr[i] = h_run_result->datesSampled->get(i);
     }
 
-    cudaMemcpy(d_dates_arr, temp_dates_arr, sizeof(double *) * h_run_result->dates_sampled->capacity,
+    cudaMemcpy(d_dates_arr, temp_dates_arr, sizeof(double *) * h_run_result->datesSampled->capacity,
                cudaMemcpyHostToDevice);
 
     temp_d_dates->arr = d_dates_arr;
-    temp_d_dates->ownsArray = h_run_result->dates_sampled->ownsArray;
-    temp_d_dates->size = h_run_result->dates_sampled->size;
-    temp_d_dates->capacity = h_run_result->dates_sampled->capacity;
+    temp_d_dates->ownsArray = h_run_result->datesSampled->ownsArray;
+    temp_d_dates->size = h_run_result->datesSampled->size;
+    temp_d_dates->capacity = h_run_result->datesSampled->capacity;
 
     cudaMemcpy(d_dates, temp_d_dates, sizeof(CudaDynamicArray<double>), cudaMemcpyHostToDevice);
 
-    temp_run_result->dates_sampled = d_dates;
+    temp_run_result->datesSampled = d_dates;
     }
 
     //Allocate transition intervals 2d array - for now skipping this as it's always empty array
