@@ -49,8 +49,20 @@ bool AtlerProbabilityEstimation::run() {
   int success = 0;
   // for runsNeeded timed
   Atler::AtlerRunResult2 *original = new Atler::AtlerRunResult2(&stapn, siMarking);
+
+  auto clones =
+      new Atler::SimpleDynamicArray<Atler::AtlerRunResult2 *>(runsNeeded);
+
   for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(*original);
+    auto clone = new Atler::AtlerRunResult2(*original);
+    clones->add(clone);
+    std::cout << "Clone " << i << " is prepared" << std::endl;
+  }
+
+  for (int i = 0; i < runsNeeded; i++) {
+    // Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(*original);
+    Atler::AtlerRunResult2 *res = clones->get(i);
+
     while (!res->maximal && !(reachedRunBound2(res))) {
       Atler::SimpleQueryVisitor checker(*res->realMarking, stapn);
       Atler::AST::BoolResult result;

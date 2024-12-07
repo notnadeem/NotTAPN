@@ -82,7 +82,6 @@ struct AtlerRunResult {
   }
 
   void prepare() {
-    // origin = new SimpleRealMarking(*initMarking);
     double originMaxDelay = parent->availableDelay();
 
     auto invIntervals =
@@ -724,6 +723,8 @@ struct AtlerRunResult2 {
     delete realMarking;
     delete stapn;
   }
+
+  void run() {}
 
   void prepare() {
     double originMaxDelay = realMarking->availableDelay();
