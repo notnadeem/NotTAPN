@@ -23,7 +23,7 @@ namespace VerifyTAPN::Cuda {
 
 struct CudaRunResult {
   bool maximal = false;
-  CudaTimedArcPetriNet tapn;
+  CudaTimedArcPetriNet *tapn;
   CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>> defaultTransitionIntervals;
   CudaDynamicArray<CudaDynamicArray<Util::CudaInterval>> transitionIntervals;
   CudaDynamicArray<double> *dates_sampled;
@@ -38,10 +38,10 @@ struct CudaRunResult {
   curandState_t *rngStates;
 
   // add default constructor
-  __host__ CudaRunResult() {}
+  __host__ __device__ CudaRunResult() {}
 
-  __host__ CudaRunResult(CudaTimedArcPetriNet tapn)
-      : tapn(tapn), defaultTransitionIntervals(tapn.transitionsLength), transitionIntervals(tapn.transitionsLength),
+  __host__ __device__ CudaRunResult(CudaTimedArcPetriNet *tapn)
+      : tapn(tapn), defaultTransitionIntervals(tapn->transitionsLength), transitionIntervals(tapn->transitionsLength),
         numericPrecision(numericPrecision) {
   }
 
@@ -64,7 +64,7 @@ struct CudaRunResult {
   //    }
   //  }
 
-  __host__ ~CudaRunResult() {}
+  __host__ __device__ ~CudaRunResult() {}
 
   __device__ CudaRunResult *copy(curandState *local_r_state) const {
     CudaRunResult *clone = new CudaRunResult(tapn);
@@ -81,13 +81,13 @@ struct CudaRunResult {
     printf("Prepared\n");
     double originMaxDelay = origin->availableDelay();
     CudaDynamicArray<Util::CudaInterval> *invIntervals =
-        new CudaDynamicArray<Util::CudaInterval>(tapn.transitionsLength);
+        new CudaDynamicArray<Util::CudaInterval>(tapn->transitionsLength);
     invIntervals->add(Util::CudaInterval(0, originMaxDelay));
     printf("invIntervals size: %d\n", invIntervals->size);
 
-    for (size_t i = 0; i < tapn.transitionsLength; i++) {
+    for (size_t i = 0; i < tapn->transitionsLength; i++) {
       printf("Intersecting transition no: %d\n", i);
-      CudaTimedTransition *transition = tapn.transitions[i];
+      CudaTimedTransition *transition = tapn->transitions[i];
       // print transition length
       printf("Inhibitor length first: %d\n", transition->inhibitorArcsLength);
       printf("Intersecting transition no after: %d\n", i);
@@ -134,7 +134,7 @@ struct CudaRunResult {
       // print if intervals is empty
       printf("Intervals empty: %d\n", intervals.empty());
       if (!intervals.empty() && intervals.get(0).lower() == 0) {
-        const CudaSMC::Distribution distribution = tapn.transitions[i]->distribution;
+        const CudaSMC::Distribution distribution = tapn->transitions[i]->distribution;
         dates_sampled->set(i, distribution.sample(local_r_state, numericPrecision));
       }
       // print check
@@ -154,8 +154,8 @@ struct CudaRunResult {
     invIntervals.add(Util::CudaInterval(0, max_delay));
     bool deadlocked = true;
 
-    for (size_t i = 0; i < tapn.transitionsLength; i++) {
-      auto transition = tapn.transitions[i];
+    for (size_t i = 0; i < tapn->transitionsLength; i++) {
+      auto transition = tapn->transitions[i];
       int index = transition->index;
       if (transition->getPresetSize() == 0 && transition->inhibitorArcsLength == 0) {
         transitionIntervals.set(index, invIntervals);
@@ -171,7 +171,7 @@ struct CudaRunResult {
       if (!enabled || reachedUpper) {
         dates_sampled->set(i, HUGE_VAL);
       } else if (newlyEnabled) {
-        const auto distribution = tapn.transitions[i]->distribution;
+        const auto distribution = tapn->transitions[i]->distribution;
         double date = distribution.sample(local_r_state, numericPrecision);
         // printf("Transition intervals inter size: %d\n", transitionIntervals.get(i).size);
         printf("Transition intervals get i 0.lower(): %d\n", transitionIntervals.get(i).get(0).lower());
@@ -271,7 +271,7 @@ struct CudaRunResult {
     if (winner_indexes.empty()) {
       winner = nullptr;
     } else if (winner_indexes.size == 1) {
-      winner = tapn.transitions[winner_indexes.get(0)];
+      winner = tapn->transitions[winner_indexes.get(0)];
     } else {
       winner = chooseWeightedWinner(winner_indexes, local_r_state);
     }
@@ -283,7 +283,7 @@ struct CudaRunResult {
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
-      double priority = tapn.transitions[candidate]->_weight;
+      double priority = tapn->transitions[candidate]->_weight;
       if (priority == HUGE_VAL) {
         infinite_weights.add(candidate);
       } else {
@@ -293,23 +293,23 @@ struct CudaRunResult {
 
     if (!infinite_weights.empty()) {
       int winner_index = CudaSMC::getRandomTokenIndex(local_r_state, infinite_weights.size - 1);
-      return tapn.transitions[infinite_weights.get(winner_index)];
+      return tapn->transitions[infinite_weights.get(winner_index)];
     }
     if (total_weight == 0) {
       int winner_index = CudaSMC::getRandomTokenIndex(local_r_state, winner_indexes.size - 1);
-      return tapn.transitions[winner_indexes.get(winner_index)];
+      return tapn->transitions[winner_indexes.get(winner_index)];
     }
     double winning_weight = CudaSMC::getRandomTokenIndex(local_r_state, total_weight);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
-      CudaTimedTransition *transition = tapn.transitions[candidate];
+      CudaTimedTransition *transition = tapn->transitions[candidate];
       winning_weight -= transition->_weight;
       if (winning_weight <= 0) {
         return transition;
       }
     }
 
-    return tapn.transitions[winner_indexes.get(0)];
+    return tapn->transitions[winner_indexes.get(0)];
   }
 
   __host__ __device__ CudaDynamicArray<Util::CudaInterval>
