@@ -98,7 +98,7 @@ inline void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterv
 
         if (element.upper() < first.get(i).lower()) {
             //Add element
-            first.set(i, element);
+            first.insert2(i, element);
             return;
         } else if (overlap(element, first.get(i))) {
             SimpleInterval u = hull(element, first.get(i));
@@ -121,16 +121,15 @@ inline void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterv
     first.add(element);
 }
 
+// NOTE: Remember to delete the interval array within the returned
+// SimpleDynamicArray when it is no longer needed
 inline SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArray<SimpleInterval>& first, const SimpleDynamicArray<SimpleInterval>& second) {
     SimpleDynamicArray<SimpleInterval> result = SimpleDynamicArray<SimpleInterval>(first.size + second.size);
 
-    std::cout << "Interception" << std::endl;
     if (first.empty() || second.empty()) {
-        std::cout << "Interception inner: " << first.empty() << " " << second.empty() << std::endl;
         return result;
     }
 
-    std::cout << "Interception 2" << std::endl;
     unsigned int i = 0, j = 0;
 
     while (i < first.size && j < second.size) {
@@ -150,10 +149,8 @@ inline SimpleDynamicArray<SimpleInterval> setIntersection(const SimpleDynamicArr
         if (i2up <= i1up) {
             j++;
         }
-
-        std::cout << "Interception 3" << std::endl;
     }
-    return result;
+    return SimpleDynamicArray<SimpleInterval>(result);
 }
 
 } /* namespace Util */

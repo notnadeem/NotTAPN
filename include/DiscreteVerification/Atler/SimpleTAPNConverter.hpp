@@ -19,7 +19,7 @@ namespace Atler {
 
 class SimpleTAPNConverter {
 public:
-  static std::pair<SimpleTimedArcPetriNet, SimpleRealMarking> *
+  static std::pair<SimpleTimedArcPetriNet, SimpleRealMarking*> *
   convert(const TAPN::TimedArcPetriNet &tapn,
           DiscreteVerification::RealMarking &marking) {
     std::unordered_map<const TAPN::TimedPlace *, SimpleTimedPlace *> placeMap;
@@ -214,37 +214,43 @@ public:
 
     // Create and return new SimpleRealMarking
     std::cout << "Converting Marking..." << std::endl;
-    SimpleRealMarking srm(marking.getPlaceList().size());
-    srm.deadlocked = marking.canDeadlock(tapn, false);
-    srm.fromDelay = marking.getPreviousDelay();
-    srm.generatedBy = marking.getGeneratedBy() != nullptr
-                          ? transitionMap.at(marking.getGeneratedBy())
-                          : nullptr;
+
+
+    auto srm = new SimpleRealMarking();
+    srm->placesLength = marking.getPlaceList().size();
+    srm->places = new SimpleRealPlace*[srm->placesLength];
+    srm->deadlocked = marking.canDeadlock(tapn, false);
+    // srm.fromDelay = marking.getPreviousDelay();
+    // srm.generatedBy = marking.getGeneratedBy() != nullptr
+    //                       ? transitionMap.at(marking.getGeneratedBy())
+                          // : nullptr;
 
     // Initialize SimpleRealPlace array with mapped places
     std::cout << "Converting Places..." << std::endl;
     auto placeLength = marking.getPlaceList().size();
-    srm.places = new SimpleRealPlace[placeLength];
     for (size_t i = 0; i < placeLength; i++) {
       DiscreteVerification::RealPlace &realPlace = marking.getPlaceList()[i];
 
       // Get mapped place
       auto simplePlace = placeMap.at(realPlace.place);
 
+      // Set new place
+      srm->places[i] = new SimpleRealPlace();
+
       // Create and initialize SimpleRealToken array with converted tokens
       size_t tokenLength = realPlace.tokens.size();
       for (size_t j = 0; j < tokenLength; j++) {
           //print token count
           std::cout << "Token count: " << realPlace.tokens[j].getCount() << std::endl;
-        srm.places[i].tokens->add(new SimpleRealToken{
-            realPlace.tokens[j].getAge(), realPlace.tokens[j].getCount()});
+        srm->places[i]->tokens->add(new SimpleRealToken{
+            realPlace.tokens[j].getAge(),realPlace.tokens[j].getCount()});
       }
 
       // Set SimpleRealPlace fields
-      srm.places[i].place = *simplePlace;
+      srm->places[i]->place = *simplePlace;
     }
 
-    auto result = new std::pair<SimpleTimedArcPetriNet, SimpleRealMarking>(
+    auto result = new std::pair<SimpleTimedArcPetriNet, SimpleRealMarking*>(
         *simpleTapn, srm);
     return result;
   }
@@ -299,8 +305,8 @@ private:
           &placeMap,
       const std::unordered_map<const TAPN::TimedTransition *,
                                SimpleTimedTransition *> &transitionMap) {
-    return {*transitionMap.at(&arc.getInputTransition()),
-            *placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
+    return {transitionMap.at(&arc.getInputTransition()),
+            placeMap.at(&arc.getOutputPlace()), arc.getWeight()};
   }
 
   static SimpleTimedTransportArc convertTransportArc(
@@ -346,6 +352,7 @@ private:
 
   static SimpleTimeInvariant
   convertTimeInvariant(const TAPN::TimeInvariant &invariant) {
+      //print the invariant
     return {invariant.isBoundStrict(), invariant.getBound()};
   }
 

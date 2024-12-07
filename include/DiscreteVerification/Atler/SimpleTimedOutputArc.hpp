@@ -10,8 +10,8 @@ struct SimpleTimedTransition;
 struct SimpleTimedPlace;
 
 struct SimpleTimedOutputArc {
-  SimpleTimedTransition &inputTransition;
-  SimpleTimedPlace &outputPlace;
+  SimpleTimedTransition *inputTransition;
+  SimpleTimedPlace *outputPlace;
   const uint32_t weight;
 };
 

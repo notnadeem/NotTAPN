@@ -18,6 +18,17 @@ project(
 # Compile Commands
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# add_compile_options(-fsanitize=address)
+# add_link_options(-fsanitize=address)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+# if ( CMAKE_COMPILER_IS_GNUCC )
+#     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+# endif()
+# if ( MSVC )
+#     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /W4")
+# endif()
+
 # C++ Definition
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

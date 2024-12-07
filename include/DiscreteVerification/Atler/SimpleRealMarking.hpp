@@ -4,7 +4,7 @@
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
 #include "SimpleDynamicArray.hpp"
 #include "SimpleTimedPlace.hpp"
-#include "SimpleTimedTransition.hpp"
+// #include "SimpleTimedTransition.hpp"
 #include <iostream>
 #include <limits>
 
@@ -21,25 +21,39 @@ struct SimpleRealToken {
 
 struct SimpleRealPlace {
   SimpleTimedPlace place;
-  SimpleDynamicArray<SimpleRealToken *>* tokens;
+  SimpleDynamicArray<SimpleRealToken *> *tokens;
 
   SimpleRealPlace() { tokens = new SimpleDynamicArray<SimpleRealToken *>(10); }
+
+  SimpleRealPlace(const SimpleRealPlace &other) {
+    place = other.place;
+    tokens = new SimpleDynamicArray<SimpleRealToken *>(other.tokens->size);
+    for (size_t i = 0; i < other.tokens->size; i++) {
+      tokens->add(new SimpleRealToken{.age = other.tokens->get(i)->age,
+                                      .count = other.tokens->get(i)->count});
+    }
+  }
 
   SimpleRealPlace(SimpleTimedPlace place, size_t tokensLength) : place(place) {
     tokens = new SimpleDynamicArray<SimpleRealToken *>(tokensLength);
   }
 
+  ~SimpleRealPlace() {
+    for (size_t i = 0; i < tokens->size; i++) {
+      delete tokens->get(i);
+    }
+    delete tokens;
+  }
+
   // TODO: check if this works
   inline void deltaAge(double x) {
-      // print all the places
-      std::cout << "place name: " << place.name << std::endl;
-      std::cout << "deltaAge: " << x << std::endl;
+    // print all the places
     for (size_t i = 0; i < tokens->size; i++) {
       tokens->get(i)->deltaAge(x);
     }
   }
 
-  inline void addToken(SimpleRealToken& newToken) {
+  inline void addToken(SimpleRealToken &newToken) {
     size_t index = 0;
     for (size_t i = 0; i < tokens->size; i++) {
       SimpleRealToken *token = tokens->get(i);
@@ -55,7 +69,7 @@ struct SimpleRealPlace {
     if (index >= tokens->size) {
       tokens->add(&newToken);
     } else {
-      tokens->set(index, &newToken);
+      tokens->insert2(index, &newToken);
     }
   }
 
@@ -86,80 +100,66 @@ struct SimpleRealPlace {
 };
 
 struct SimpleRealMarking {
-  SimpleRealPlace *places;
+  SimpleRealPlace **places;
   size_t placesLength = 0;
 
   bool deadlocked;
-  const SimpleTimedTransition *generatedBy = nullptr;
-  double fromDelay = 0.0;
 
-  SimpleRealMarking() {
-      places = new SimpleRealPlace[0];
-      deadlocked = false;
-      generatedBy = nullptr;
-      fromDelay = 0.0;
+  SimpleRealMarking() {}
+
+  // SimpleRealMarking(const SimpleRealMarking &other) {
+  //   placesLength = other.placesLength;
+  //   places = other.places;
+  //   deadlocked = other.deadlocked;
+  // }
+
+  SimpleRealMarking(const SimpleRealMarking &other) {
+    placesLength = other.placesLength;
+    deadlocked = other.deadlocked;
+    places = new SimpleRealPlace*[other.placesLength];
+    for (size_t i = 0; i < other.placesLength; i++) {
+        places[i] = new SimpleRealPlace(*other.places[i]);
     }
-
-  SimpleRealMarking(size_t placesLength) : placesLength(placesLength) {
-    places = new SimpleRealPlace[placesLength];
-    deadlocked = false;
-    generatedBy = nullptr;
-    fromDelay = 0.0;
   }
 
-  SimpleRealMarking(const SimpleRealMarking& other) {
-      placesLength = other.placesLength;
-      places = other.places;
-      deadlocked = other.deadlocked;
+  ~SimpleRealMarking() {
+      for (size_t i = 0; i < placesLength; i++) {
+        delete places[i];
+      }
+      delete[] places;
   }
 
   void deltaAge(double x) {
     for (size_t i = 0; i < placesLength; i++) {
-      places[i].deltaAge(x);
+      places[i]->deltaAge(x);
     }
   }
-
-  SimpleRealMarking *clone() const {
-      SimpleRealMarking *result = new SimpleRealMarking();
-      result->placesLength = placesLength;
-      result->places = new SimpleRealPlace[placesLength];
-      for (size_t i = 0; i < placesLength; i++) {
-        result->places[i].place = places[i].place;
-        for (size_t j = 0; j < places[i].tokens->size; j++) {
-          SimpleRealToken* newToken = new SimpleRealToken();
-          newToken->age = places[i].tokens->get(j)->age;
-          newToken->count = places[i].tokens->get(j)->count;
-          result->places[i].tokens->add(newToken);
-        }
-      }
-      result->deadlocked = deadlocked;
-      result->generatedBy = generatedBy;
-      result->fromDelay = fromDelay;
-      return result;
-    }
 
   uint32_t numberOfTokensInPlace(int placeId) const {
-    return places[placeId].totalTokenCount();
+    return places[placeId]->totalTokenCount();
   }
 
-  void addTokenInPlace(SimpleTimedPlace &place, SimpleRealToken& newToken) {
-      places[place.index].addToken(newToken);
+  void addTokenInPlace(SimpleTimedPlace &place, SimpleRealToken &newToken) {
+    auto token = new SimpleRealToken{.age = newToken.age, .count = newToken.count};
+    places[place.index]->addToken(*token);
   }
 
-  bool canDeadlock(const SimpleTimedArcPetriNet &tapn, int maxDelay, bool ignoreCanDelay) const {
-      return deadlocked;
+  bool canDeadlock(const SimpleTimedArcPetriNet &tapn, int maxDelay,
+                   bool ignoreCanDelay) const {
+    return deadlocked;
   }
 
-  inline bool canDeadlock(const SimpleTimedArcPetriNet &tapn, const int maxDelay) const {
-      return canDeadlock(tapn, maxDelay, false);
+  inline bool canDeadlock(const SimpleTimedArcPetriNet &tapn,
+                          const int maxDelay) const {
+    return canDeadlock(tapn, maxDelay, false);
   };
 
   double availableDelay() const {
     double available = std::numeric_limits<double>::infinity();
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i].tokens->size == 0)
+      if (places[i]->isEmpty())
         continue;
-      double delay = places[i].availableDelay();
+      double delay = places[i]->availableDelay();
       if (delay < available) {
         available = delay;
       }
