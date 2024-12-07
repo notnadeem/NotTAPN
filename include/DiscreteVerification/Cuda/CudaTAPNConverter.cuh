@@ -258,7 +258,9 @@ private:
     CudaTimedPlace cudaPlace;
     cudaPlace.index = place.getIndex();
     cudaPlace.name = place.getName().c_str();
+    cudaPlace.nameLength = place.getName().size();
     cudaPlace.id = place.getId().c_str();
+    cudaPlace.idLength = place.getId().size();
     cudaPlace.type = convertPlaceType(place.getType());
     cudaPlace.timeInvariant = convertTimeInvariant(place.getInvariant());
     cudaPlace.untimed = place.isUntimed();
@@ -273,7 +275,9 @@ private:
     CudaTimedTransition cudaTransition;
     cudaTransition.index = transition.getIndex();
     cudaTransition.name = transition.getName().c_str();
+    cudaTransition.nameLength = transition.getName().size();
     cudaTransition.id = transition.getId().c_str();
+    cudaTransition.idLength = transition.getId().size();
     cudaTransition.untimedPostset = transition.hasUntimedPostset();
     cudaTransition.urgent = transition.isUrgent();
     cudaTransition.controllable = transition.isControllable();

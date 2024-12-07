@@ -144,16 +144,16 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
     printf("\n");
 
     printf("\nLogging Real Marking details:\n");
-    printf("Marking deadlocked: %d\n", marking->deadlocked);
-    printf("Marking fromDelay: %f\n", marking->fromDelay);
+    printf("Marking deadlocked: %s\n", marking->deadlocked);
+    printf("Marking fromDelay: %d\n", marking->fromDelay);
     printf("Marking generatedBy: %p\n", marking->generatedBy);
-    printf("Marking places length: %zu\n", marking->placesLength);
+    printf("Marking places length: %d\n", marking->placesLength);
 
     for (size_t i = 0; i < marking->placesLength; i++) {
       CudaRealPlace *place = marking->places[i];
       printf("\nReal Place %u:\n", i);
       printf("Place Name: %s\n", place->place->name);
-      printf("Total Token Count: %d\n", place->totalTokenCount());
+      printf("Total Token Count: %u\n", place->totalTokenCount());
       printf("Available Delay: %f\n", place->availableDelay());
 
       // Print tokens
