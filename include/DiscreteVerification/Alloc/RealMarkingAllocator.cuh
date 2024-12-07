@@ -75,45 +75,40 @@ struct RealMarkingAllocator {
 
       CudaTimedPlace *temp_place = (CudaTimedPlace *)malloc(sizeof(CudaTimedPlace));
 
-      CudaDynamicArray<CudaRealToken *> *temp_token = new CudaDynamicArray<CudaRealToken *>();
+      //Allocate for the tokens array
+      CudaDynamicArray<CudaRealToken *>* d_tokens;
+      cudaMalloc(&d_tokens, sizeof(CudaDynamicArray<CudaRealToken *>));
 
-      temp_token->arr = h_marking->places[i]->tokens->arr;
+      CudaDynamicArray<CudaRealToken *>* temp_tokens = (CudaDynamicArray<CudaRealToken *>*)malloc(sizeof(CudaDynamicArray<CudaRealToken *>));
 
-      // Host variables to store values
-      size_t host_size, host_capacity;
+      CudaRealToken** d_arr;
+      cudaMalloc(&d_arr, sizeof(CudaRealToken*) * h_marking->places[i]->tokens->capacity);
 
-      // Allocate and copy size
-      size_t *d_size;
-      cudaMalloc(&d_size, sizeof(size_t));
-      cudaError_t err =
-          cudaMemcpy(d_size, &(h_marking->places[i]->tokens->size), sizeof(size_t), cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        fprintf(stderr, "Size copy failed: %s\n", cudaGetErrorString(err));
+      CudaRealToken **temp_arr =
+        (CudaRealToken **)malloc(sizeof(CudaRealToken *) * h_marking->places[i]->tokens->capacity);
+
+      for(int j = 0; j < h_marking->places[i]->tokens->size; j++) {
+        CudaRealToken *temp_real_token = (CudaRealToken *)malloc(sizeof(CudaRealToken));
+        CudaRealToken *d_real_token;
+        cudaMalloc(&d_real_token, sizeof(CudaRealToken));
+
+        temp_real_token->age = h_marking->places[i]->tokens->get(j)->age;
+        temp_real_token->count = h_marking->places[i]->tokens->get(j)->count;
+
+        cudaMemcpy(d_real_token, temp_real_token, sizeof(CudaRealToken), cudaMemcpyHostToDevice);
+        
+        temp_arr[j] = d_real_token;
       }
 
-      // Copy size back to host
-      err = cudaMemcpy(&host_size, d_size, sizeof(size_t), cudaMemcpyDeviceToHost);
-      if (err != cudaSuccess) {
-        fprintf(stderr, "Size copy back failed: %s\n", cudaGetErrorString(err));
-      }
+      cudaMemcpy(d_arr, temp_arr, sizeof(CudaRealToken *) * h_marking->places[i]->tokens->capacity, cudaMemcpyHostToDevice);
 
-      // Allocate and copy capacity
-      size_t *d_capacity;
-      cudaMalloc(&d_capacity, sizeof(size_t));
-      err = cudaMemcpy(d_capacity, &(h_marking->places[i]->tokens->capacity), sizeof(size_t), cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        fprintf(stderr, "Capacity copy failed: %s\n", cudaGetErrorString(err));
-      }
+      temp_tokens->arr = d_arr;
+      
+      temp_tokens->ownsArray = h_marking->places[i]->tokens->ownsArray;
+      temp_tokens->size = h_marking->places[i]->tokens->size;
+      temp_tokens->capacity = h_marking->places[i]->tokens->capacity;
 
-      // Copy capacity back to host
-      err = cudaMemcpy(&host_capacity, d_capacity, sizeof(size_t), cudaMemcpyDeviceToHost);
-      if (err != cudaSuccess) {
-        fprintf(stderr, "Capacity copy back failed: %s\n", cudaGetErrorString(err));
-      }
-
-      // Update temp_token with host values
-      temp_token->size = host_size;
-      temp_token->capacity = host_capacity;
+      cudaMemcpy(d_tokens, temp_tokens, sizeof(CudaDynamicArray<CudaRealToken *>), cudaMemcpyHostToDevice);
 
       CudaTimedPlace *d_place;
       cudaMalloc(&d_place, sizeof(CudaTimedPlace));
@@ -123,14 +118,9 @@ struct RealMarkingAllocator {
       cudaMemcpy(d_place, temp_place, sizeof(CudaTimedPlace), cudaMemcpyHostToDevice);
 
       temp_real_place->place = d_place;
-      temp_real_place->tokens = h_marking->places[i]->tokens;
+      temp_real_place->tokens = d_tokens;
 
       cudaMemcpy(d_real_place, temp_real_place, sizeof(CudaRealPlace), cudaMemcpyHostToDevice);
-      err = cudaGetLastError();
-      if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA Error in RealMarkingAllocator: %s\n", cudaGetErrorString(err));
-        // Optional: throw or handle error
-      }
 
       temp_real_places[i] = d_real_place;
     }
