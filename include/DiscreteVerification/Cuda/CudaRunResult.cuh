@@ -27,7 +27,7 @@ struct CudaRunResult {
   CudaTimedArcPetriNet *tapn;
   CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *> *transitionIntervals;
   CudaDynamicArray<double> *datesSampled;
-  CudaRealMarking realMarking;
+  CudaRealMarking *realMarking;
   double totalTime = 0;
   int totalSteps = 0;
 
@@ -35,7 +35,7 @@ struct CudaRunResult {
 
   curandState_t *rngStates;
 
-  __host__ __device__ CudaRunResult(CudaTimedArcPetriNet *tapn, CudaRealMarking srm,
+  __host__ __device__ CudaRunResult(CudaTimedArcPetriNet *tapn, CudaRealMarking *srm,
                                     const unsigned int numericPrecision = 0)
       : tapn(tapn), realMarking(srm), numericPrecision(numericPrecision) {
 
@@ -53,7 +53,7 @@ struct CudaRunResult {
 
   // private: (fix this later)
   __device__ void prepare(curandState *local_r_state) {
-    double originMaxDelay = realMarking.availableDelay();
+    double originMaxDelay = realMarking->availableDelay();
 
     auto invIntervals = CudaDynamicArray<Util::CudaInterval>(10);
     invIntervals.add(Util::CudaInterval(0, originMaxDelay));
@@ -92,7 +92,7 @@ struct CudaRunResult {
                    datesSampled->get(i) == 0);
     }
 
-    realMarking.deadlocked = deadlock;
+    realMarking->deadlocked = deadlock;
   }
 
   // next function
@@ -104,7 +104,7 @@ struct CudaRunResult {
       return false;
     }
 
-    realMarking.deltaAge(delay);
+    realMarking->deltaAge(delay);
     totalTime += delay;
 
     if (winner != nullptr) {
@@ -125,7 +125,7 @@ struct CudaRunResult {
 
   // refresh intervals
   __device__ void refreshTransitionsIntervals(curandState *local_r_state) {
-    double max_delay = realMarking.availableDelay();
+    double max_delay = realMarking->availableDelay();
     auto invIntervals = CudaDynamicArray<Util::CudaInterval>(10);
     invIntervals.add(Util::CudaInterval(0, max_delay));
     bool deadlocked = true;
@@ -166,7 +166,7 @@ struct CudaRunResult {
                      datesSampled->get(i) > 0);
     }
 
-    realMarking.deadlocked = deadlocked;
+    realMarking->deadlocked = deadlocked;
   }
 
   // get winner transtion
@@ -264,14 +264,14 @@ struct CudaRunResult {
     // for each inhibitor arc
     for (size_t i = 0; i < transition.inhibitorArcsLength; i++) {
       auto inhib = transition.inhibitorArcs[i];
-      if (realMarking.numberOfTokensInPlace(inhib->inputPlace->index) >= inhib->weight) {
+      if (realMarking->numberOfTokensInPlace(inhib->inputPlace->index) >= inhib->weight) {
         return CudaDynamicArray(disabled);
       }
     }
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      CudaRealPlace *place = realMarking.places[arc->inputPlace->index];
+      CudaRealPlace *place = realMarking->places[arc->inputPlace->index];
       if (place->isEmpty()) {
         return CudaDynamicArray(disabled);
       }
@@ -287,7 +287,7 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.transportArcsLength; i++) {
       CudaTimedTransportArc *transport = transition.transportArcs[i];
-      auto place = realMarking.places[transport->source->index];
+      auto place = realMarking->places[transport->source->index];
 
       if (place->isEmpty()) {
         return CudaDynamicArray(disabled);
@@ -446,7 +446,7 @@ struct CudaRunResult {
       return false;
     }
 
-    CudaRealPlace **placeList = realMarking.places;
+    CudaRealPlace **placeList = realMarking->places;
 
     for (size_t i = 0; i < transition->presetLength; i++) {
       CudaTimedInputArc *input = transition->preset[i];
@@ -511,11 +511,11 @@ struct CudaRunResult {
       CudaTimedPlace *place = transition->postset[i]->outputPlace;
       CudaTimedOutputArc *post = transition->postset[i];
       auto token = new CudaRealToken{.age = 0.0, .count = static_cast<int>(post->weight)};
-      realMarking.addTokenInPlace(*place, *token);
+      realMarking->addTokenInPlace(*place, *token);
     }
     for (size_t i = 0; i < toCreate.size; i++) {
       auto [place, token] = toCreate.get(i);
-      realMarking.addTokenInPlace(*place, token);
+      realMarking->addTokenInPlace(*place, token);
     }
 
     return true;

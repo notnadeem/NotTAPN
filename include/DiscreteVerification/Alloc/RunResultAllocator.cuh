@@ -37,6 +37,8 @@ struct RunResultAllocator {
     CudaRealMarking *d_cmarking = realMarkingAllocator.allocate_real_marking(
         h_marking, petriNetAllocator.transition_map, petriNetAllocator.place_map);
 
+    temp_run_result->realMarking = d_cmarking;
+
     // Allocate all the dynamic arrays
     if(h_run_result->datesSampled != nullptr) {
       CudaDynamicArray<double> *d_dates;
@@ -55,7 +57,7 @@ struct RunResultAllocator {
 
     cudaMemcpy(d_dates_arr, temp_dates_arr, sizeof(double *) * h_run_result->datesSampled->capacity,
                cudaMemcpyHostToDevice);
-
+    
     temp_d_dates->arr = d_dates_arr;
     temp_d_dates->ownsArray = h_run_result->datesSampled->ownsArray;
     temp_d_dates->size = h_run_result->datesSampled->size;

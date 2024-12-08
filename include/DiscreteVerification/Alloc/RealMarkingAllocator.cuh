@@ -15,7 +15,7 @@ struct RealMarkingAllocator {
     CudaRealMarking *d_real_marking;
     cudaMalloc(&d_real_marking, sizeof(CudaRealMarking));
 
-    CudaRealMarking *temp_real_marking = (CudaRealMarking *)malloc(sizeof(CudaRealMarking *));
+    CudaRealMarking *temp_real_marking = (CudaRealMarking *)malloc(sizeof(CudaRealMarking));
 
     CudaRealPlace **d_real_places = cuda_allocate_places_for_marking(h_real_marking, place_map);
 

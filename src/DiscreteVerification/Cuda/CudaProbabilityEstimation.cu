@@ -1,24 +1,26 @@
 #include "DiscreteVerification/Alloc/CudaPetriNetAllocator.cuh"
 #include "DiscreteVerification/Alloc/RealMarkingAllocator.cuh"
+#include "DiscreteVerification/Alloc/RunResultAllocator.cuh"
 #include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include "DiscreteVerification/Cuda/CudaQueryVisitor.cuh"
 #include "DiscreteVerification/Cuda/CudaRunResult.cuh"
 #include "DiscreteVerification/Cuda/CudaSMCQueryConverter.cuh"
 #include "DiscreteVerification/Cuda/CudaTAPNConverter.cuh"
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
-#include "DiscreteVerification/Alloc/RunResultAllocator.cuh"
 
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
 using namespace VerifyTAPN::Cuda;
 using namespace VerifyTAPN::Alloc;
-//For now single kernel execution per run needed
-//Since every run can have different execution time could be nice to try running multiple runs per kernel to improve warp utilization
+// For now single kernel execution per run needed
+// Since every run can have different execution time could be nice to try running multiple runs per kernel to improve
+// warp utilization
 
 // __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
 //                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
-//                                     int *stepBound, int *successCount, int *runsNeeded, curandState *states, int *rand_seed) {
+//                                     int *stepBound, int *successCount, int *runsNeeded, curandState *states, int
+//                                     *rand_seed) {
 //   int tid = blockIdx.x * blockDim.x + threadIdx.x;
 //   int runNeed = *runsNeeded;
 //   if (tid >= runNeed) return;
@@ -57,8 +59,7 @@ using namespace VerifyTAPN::Alloc;
 //   }
 // }
 
-__global__ void testAllocationKernel(CudaRunResult *runner,
-                                     CudaRealMarking *marking, u_int *runNeed) {
+__global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *marking, u_int *runNeed) {
   printf("Kernel executed\n");
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid > 0) return;
@@ -74,8 +75,9 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
     printf("TimedTransition with index: %d, UntimedPostSet: %d, Urgent: %d, "
            "Controllable: %d, Position: < %f , %f >, Weight: %f, Name: %s, Id: "
            "%s\n",
-           runner->tapn->transitions[i]->index, runner->tapn->transitions[i]->untimedPostset, runner->tapn->transitions[i]->urgent,
-           runner->tapn->transitions[i]->controllable, runner->tapn->transitions[i]->_position.first, runner->tapn->transitions[i]->_position.second,
+           runner->tapn->transitions[i]->index, runner->tapn->transitions[i]->untimedPostset,
+           runner->tapn->transitions[i]->urgent, runner->tapn->transitions[i]->controllable,
+           runner->tapn->transitions[i]->_position.first, runner->tapn->transitions[i]->_position.second,
            runner->tapn->transitions[i]->_weight, runner->tapn->transitions[i]->name, runner->tapn->transitions[i]->id);
     printf("Transition has pointer: %p to preset, Name place in preset double "
            "pointer preset[0]: %s with pointer: %p\n",
@@ -94,7 +96,8 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
     if (runner->tapn->transitions[i]->inhibitorArcsLength > 0) {
       printf("Transition has pointer: %p to inhibitorArcs, Place name in "
              "inhibitorArc double pointer inhibitor[0]: %s, with pointer: %p\n",
-             runner->tapn->transitions[i]->inhibitorArcs, runner->tapn->transitions[i]->inhibitorArcs[0]->inputPlace->name,
+             runner->tapn->transitions[i]->inhibitorArcs,
+             runner->tapn->transitions[i]->inhibitorArcs[0]->inputPlace->name,
              runner->tapn->transitions[i]->inhibitorArcs[0]->inputPlace);
     }
     printf("\nTimed Transition %d Has FiringMode: %d\n\n", i, runner->tapn->transitions[i]->_firingMode);
@@ -116,21 +119,24 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
     // Print transportArcs
     if (runner->tapn->places[i]->transportArcsLength > 0) {
       printf("Place has transportArcs: %p\n", runner->tapn->places[i]->transportArcs);
-      printf("First transportArc Source Name: %s, Pointer: %p\n", runner->tapn->places[i]->transportArcs[0]->source->name,
+      printf("First transportArc Source Name: %s, Pointer: %p\n",
+             runner->tapn->places[i]->transportArcs[0]->source->name,
              runner->tapn->places[i]->transportArcs[0]->source);
     }
 
     // Print prodTransportArcs
     if (runner->tapn->places[i]->prodTransportArcsLength > 0) {
       printf("Place has prodTransportArcs: %p\n", runner->tapn->places[i]->prodTransportArcs);
-      printf("First prodTransportArc Source Name: %s, Pointer: %p\n", runner->tapn->places[i]->prodTransportArcs[0]->source->name,
+      printf("First prodTransportArc Source Name: %s, Pointer: %p\n",
+             runner->tapn->places[i]->prodTransportArcs[0]->source->name,
              runner->tapn->places[i]->prodTransportArcs[0]->source);
     }
 
     // Print inhibitorArcs
     if (runner->tapn->places[i]->inhibitorArcsLength > 0) {
       printf("Place has inhibitorArcs: %p\n", runner->tapn->places[i]->inhibitorArcs);
-      printf("First inhibitorArc InputPlace Name: %s, Pointer: %p\n", runner->tapn->places[i]->inhibitorArcs[0]->inputPlace->name,
+      printf("First inhibitorArc InputPlace Name: %s, Pointer: %p\n",
+             runner->tapn->places[i]->inhibitorArcs[0]->inputPlace->name,
              runner->tapn->places[i]->inhibitorArcs[0]->inputPlace);
     }
 
@@ -144,8 +150,8 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
     printf("\n");
 
     printf("\nLogging Real Marking details:\n");
-    printf("Marking deadlocked: %s\n", marking->deadlocked);
-    printf("Marking fromDelay: %d\n", marking->fromDelay);
+    printf("Marking deadlocked: %d\n", marking->deadlocked);
+    printf("Marking fromDelay: %2f\n", marking->fromDelay);
     printf("Marking generatedBy: %p\n", marking->generatedBy);
     printf("Marking places length: %d\n", marking->placesLength);
 
@@ -153,14 +159,17 @@ __global__ void testAllocationKernel(CudaRunResult *runner,
       CudaRealPlace *place = marking->places[i];
       printf("\nReal Place %u:\n", i);
       printf("Place Name: %s\n", place->place->name);
-      printf("Total Token Count: %u\n", place->totalTokenCount());
-      printf("Available Delay: %f\n", place->availableDelay());
+      printf("Total Token Count: %u\n", place->tokens->size);
+      printf("Available Delay: %f\n", place->availableDelay() == HUGE_VAL ? 0.0f : place->availableDelay());
 
       // Print tokens
       printf("Tokens in place:\n");
+      if(place->tokens->size == 0) {
+        printf("No tokens in place\n");
+      }
       for (size_t j = 0; j < place->tokens->size; j++) {
         CudaRealToken *token = place->tokens->get(j);
-        printf("Token %zu - Age: %f, Count: %d\n", j, token->age, token->count);
+        printf("Token %d - Age: %f, Count: %d\n", j, token->age, token->count);
       }
 
       printf("Max Token Age: %f\n", place->maxTokenAge());
@@ -197,16 +206,13 @@ bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Blocks..." << blocks << std::endl;
 
   CudaTimedArcPetriNet *cptapn = &ctapn;
-  CudaRealMarking ciMarking = *cipMarking;
 
-  auto runres = CudaRunResult(cptapn, ciMarking);
+  auto runres = CudaRunResult(cptapn, cipMarking);
 
-
-
-  auto runner = new CudaRunResult(cptapn, ciMarking);
+  auto runner = new CudaRunResult(cptapn, cipMarking);
 
   // Allocate the run result
-  
+
   RunResultAllocator allocator;
 
   auto allocResult = allocator.allocate(runner, cipMarking, blocks, threadsPerBlock);
