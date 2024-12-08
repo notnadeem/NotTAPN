@@ -99,27 +99,5 @@ __host__ __device__ void CudaQuery::accept(CudaVisitor &visitor, Result &context
   visitor.visit(*this, context);
 }
 
-__host__ __device__ AtomicProposition::AtomicProposition(ArithmeticExpression *l, std::string *sop,
-                                     ArithmeticExpression *r)
-    : left(l), right(r) {
-  if (*sop == "=" || *sop == "==")
-    op = EQ;
-  else if (*sop == "!=")
-    op = NE;
-  else if (*sop == "<")
-    op = LT;
-  else if (*sop == "<=")
-    op = LE;
-  else if (*sop == ">=") {
-    op = LE;
-    std::swap(left, right);
-  } else if (*sop == ">") {
-    op = LT;
-    std::swap(left, right);
-  } else {
-    printf("Unknown operator: %s\n");
-  }
-}
-
 } // namespace AST
 } // namespace VerifyTAPN::Atler

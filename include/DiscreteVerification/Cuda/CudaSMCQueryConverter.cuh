@@ -23,35 +23,59 @@ private:
 // Implementation
 inline VerifyTAPN::Cuda::AST::CudaExpression *CudaSMCQueryConverter::convert(const VerifyTAPN::AST::Expression *expr) {
   if (const auto *notExpr = dynamic_cast<const VerifyTAPN::AST::NotExpression *>(expr)) {
-    return new AST::NotExpression(convert(&notExpr->getChild()));
+    AST::NotExpression* expression = new AST::NotExpression(convert(&notExpr->getChild()));
+    expression->setType(AST::NOT_EXPRESSION);
+    return expression;
   } else if (const auto *deadlock = dynamic_cast<const VerifyTAPN::AST::DeadlockExpression *>(expr)) {
-    return new AST::DeadlockExpression();
+    AST::DeadlockExpression* expression = new AST::DeadlockExpression();
+    expression->setType(AST::DEADLOCK_EXPRESSION);
+    return expression;
   } else if (const auto *boolExpr = dynamic_cast<const VerifyTAPN::AST::BoolExpression *>(expr)) {
-    return new AST::BoolExpression(boolExpr->getValue());
+    AST::BoolExpression* expression = new AST::BoolExpression(boolExpr->getValue());
+    expression->setType(AST::BOOL_EXPRESSION);
+    return expression;
   } else if (const auto *atomic = dynamic_cast<const VerifyTAPN::AST::AtomicProposition *>(expr)) {
-    return new AST::AtomicProposition(convert(&atomic->getLeft()), convertOperator(atomic->getOperator()),
+    AST::AtomicProposition* expression = new AST::AtomicProposition(convert(&atomic->getLeft()), convertOperator(atomic->getOperator()),
                                              convert(&atomic->getRight()));
+    expression->setType(AST::ATOMIC_PROPOSITION);
+    return expression;
   } else if (const auto *andExpr = dynamic_cast<const VerifyTAPN::AST::AndExpression *>(expr)) {
-    return new AST::AndExpression(convert(&andExpr->getLeft()), convert(&andExpr->getRight()));
+    AST::AndExpression* expression = new AST::AndExpression(convert(&andExpr->getLeft()), convert(&andExpr->getRight()));
+    expression->setType(AST::AND_EXPRESSION);
+    return expression;
   } else if (const auto *orExpr = dynamic_cast<const VerifyTAPN::AST::OrExpression *>(expr)) {
-    return new AST::OrExpression(convert(&orExpr->getLeft()), convert(&orExpr->getRight()));
+    AST::OrExpression* expression = new AST::OrExpression(convert(&orExpr->getLeft()), convert(&orExpr->getRight()));
+    expression->setType(AST::OR_EXPRESSION);
+    return expression;
   }
   return nullptr;
 }
 
 inline AST::ArithmeticExpression *CudaSMCQueryConverter::convert(VerifyTAPN::AST::ArithmeticExpression *expr) {
   if (auto *plus = dynamic_cast<VerifyTAPN::AST::PlusExpression *>(expr)) {
-    return new AST::PlusExpression(convert(&plus->getLeft()), convert(&plus->getRight()));
+    AST::PlusExpression* expression = new AST::PlusExpression(convert(&plus->getLeft()), convert(&plus->getRight()));
+    expression->setType(AST::PLUS_EXPRESSION);
+    return expression;
   } else if (auto *subtract = dynamic_cast<VerifyTAPN::AST::SubtractExpression *>(expr)) {
-    return new AST::SubtractExpression(convert(&subtract->getLeft()), convert(&subtract->getRight()));
+    AST::SubtractExpression* expression = new AST::SubtractExpression(convert(&subtract->getLeft()), convert(&subtract->getRight()));
+    expression->setType(AST::SUBTRACT_EXPRESSION);
+    return expression;
   } else if (const auto *minus = dynamic_cast<const VerifyTAPN::AST::MinusExpression *>(expr)) {
-    return new AST::MinusExpression(convert(&minus->getValue()));
+    AST::MinusExpression* expression = new AST::MinusExpression(convert(&minus->getValue()));
+    expression->setType(AST::MINUS_EXPRESSION);
+    return expression;
   } else if (auto *multiply = dynamic_cast<VerifyTAPN::AST::MultiplyExpression *>(expr)) {
-    return new AST::MultiplyExpression(convert(&multiply->getLeft()), convert(&multiply->getRight()));
+    AST::MultiplyExpression* expression = new AST::MultiplyExpression(convert(&multiply->getLeft()), convert(&multiply->getRight()));
+    expression->setType(AST::MULTIPLY_EXPRESSION);
+    return expression;
   } else if (const auto *number = dynamic_cast<const VerifyTAPN::AST::NumberExpression *>(expr)) {
-    return new AST::NumberExpression(number->getValue());
+    AST::NumberExpression* expression = new AST::NumberExpression(number->getValue());
+    expression->setType(AST::NUMBER_EXPRESSION);
+    return expression;
   } else if (const auto *identifier = dynamic_cast<const VerifyTAPN::AST::IdentifierExpression *>(expr)) {
-    return new AST::IdentifierExpression(identifier->getPlace());
+    AST::IdentifierExpression* expression = new AST::IdentifierExpression(identifier->getPlace());
+    expression->setType(AST::IDENTIFIER_EXPRESSION);
+    return expression;
   }
   return nullptr;
 }
@@ -71,9 +95,12 @@ CudaSMCQueryConverter::convertSMCSettings(const VerifyTAPN::AST::SMCSettings &se
 }
 
 inline VerifyTAPN::Cuda::AST::CudaSMCQuery *CudaSMCQueryConverter::convert(VerifyTAPN::AST::SMCQuery *query) {
-  return new VerifyTAPN::Cuda::AST::CudaSMCQuery(convertQuantifier(query->getQuantifier()),
+  VerifyTAPN::Cuda::AST::CudaExpression* testExpr = convert(&query->getConstChild());
+  
+  VerifyTAPN::Cuda::AST::CudaSMCQuery* result = new VerifyTAPN::Cuda::AST::CudaSMCQuery(convertQuantifier(query->getQuantifier()),
                                                  convertSMCSettings(query->getSmcSettings()),
                                                  convert(&query->getConstChild()));
+  return result;
 }
 
 inline AST::AtomicProposition::op_e
