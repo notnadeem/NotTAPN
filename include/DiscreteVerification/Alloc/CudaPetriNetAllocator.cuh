@@ -434,7 +434,7 @@ struct CudaPetriNetAllocator {
                  cudaMemcpyHostToDevice);
 
       cudaMemcpy(d_transition_preset, temp_transition_preset,
-                 sizeof(CudaTimedInputArc *) * h_petrinet->transitions[i]->postsetLength, cudaMemcpyHostToDevice);
+                 sizeof(CudaTimedInputArc *) * h_petrinet->transitions[i]->presetLength, cudaMemcpyHostToDevice);
 
       cudaMemcpy(&(temp_transitions[i]->preset), &d_transition_preset, sizeof(CudaTimedInputArc **),
                  cudaMemcpyHostToDevice);

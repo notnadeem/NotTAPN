@@ -17,7 +17,7 @@ struct CudaTimedTransportArc {
   CudaTimedPlace *source;
   CudaTimedTransition *transition;
   CudaTimedPlace *destination;
-  const int weight;
+  const uint32_t weight;
 };
 
 } // namespace Cuda

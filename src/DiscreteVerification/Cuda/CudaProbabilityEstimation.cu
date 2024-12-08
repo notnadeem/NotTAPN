@@ -17,47 +17,47 @@ using namespace VerifyTAPN::Alloc;
 // Since every run can have different execution time could be nice to try running multiple runs per kernel to improve
 // warp utilization
 
-// __global__ void runSimulationKernel(Cuda::CudaTimedArcPetriNet *ctapn, Cuda::CudaRealMarking *initialMarking,
-//                                     Cuda::AST::CudaSMCQuery *query, Cuda::CudaRunResult *runner, int *timeBound,
-//                                     int *stepBound, int *successCount, int *runsNeeded, curandState *states, int
-//                                     *rand_seed) {
-//   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-//   int runNeed = *runsNeeded;
-//   if (tid >= runNeed) return;
+__global__ void runSimulationKernel(Cuda::CudaRunResult *runner,
+                                    // Cuda::AST::CudaSMCQuery *query,
+                                    int *successCount, int *runsNeeded, curandState *states, int *rand_seed) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int runNeed = *runsNeeded;
+  if (tid >= runNeed) return;
 
-//   curand_init(*rand_seed, tid, 0, &states[tid]);
+  curand_init(*rand_seed, tid, 0, &states[tid]);
 
-//   // Copy global state to local memory for faster access
-//   curandState local_r_state = states[tid];
+  // Copy global state to local memory for faster access
+  curandState local_r_state = states[tid];
 
-//   if (tid % 1000 == 0) {
-//     printf("Thread %d initialized\n", tid);
-//   }
 
-//   int tBound = *timeBound;
-//   int sBound = *stepBound;
+  if (tid % 1000 == 0) {
+    printf("Thread %d initialized\n", tid);
+  }
+  
 
-//   Cuda::CudaTimedArcPetriNet tapn = *ctapn;
+  // int tBound = *timeBound;
+  // int sBound = *stepBound;
 
-//   // TODO prepare per thread
-//   // runner.prepare(initialMarking);
-//   Cuda::CudaRealMarking *newMarking = runner->parent;
+  // Cuda::CudaTimedArcPetriNet tapn = *ctapn;
 
-//   while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
+  // TODO prepare per thread
+  runner->prepare(&local_r_state);
 
-//     Cuda::CudaRealMarking *child = newMarking->clone();
-//     Cuda::CudaQueryVisitor checker(*child, tapn);
-//     Cuda::AST::BoolResult result;
+  // while (!runner->maximal && !(runner->totalTime >= tBound || runner->totalSteps >= sBound)) {
 
-//     query->accept(checker, result);
+  //   Cuda::CudaRealMarking *child = runner->realMarking;
+  //   Cuda::CudaQueryVisitor checker(*child, tapn);
+  //   Cuda::AST::BoolResult result;
 
-//     if (result.value) {
-//       atomicAdd(successCount, 1);
-//       break;
-//     }
-//     newMarking = runner->next(&local_r_state);
-//   }
-// }
+  //   query->accept(checker, result);
+
+  //   if (result.value) {
+  //     atomicAdd(successCount, 1);
+  //     break;
+  //   }
+  //   newMarking = runner->next(&local_r_state);
+  // }
+}
 
 __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *marking, u_int *runNeed) {
   printf("Kernel executed\n");
@@ -101,6 +101,9 @@ __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *mar
              runner->tapn->transitions[i]->inhibitorArcs[0]->inputPlace);
     }
     printf("\nTimed Transition %d Has FiringMode: %d\n\n", i, runner->tapn->transitions[i]->_firingMode);
+        for (size_t i = 0; i < runner->tapn->transitions[i]->presetLength; i++) {
+      printf("Preset %d: %s\n", i, runner->tapn->transitions[i]->preset[i]->inputPlace->name);
+    }
   }
 
   printf("Logging all places and their token counts:\n");
@@ -164,7 +167,7 @@ __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *mar
 
       // Print tokens
       printf("Tokens in place:\n");
-      if(place->tokens->size == 0) {
+      if (place->tokens->size == 0) {
         printf("No tokens in place\n");
       }
       for (size_t j = 0; j < place->tokens->size; j++) {
@@ -174,6 +177,20 @@ __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *mar
 
       printf("Max Token Age: %f\n", place->maxTokenAge());
       printf("Is Empty: %d\n\n", place->isEmpty());
+    }
+
+    printf("\nInterval test\n");
+    printf("d_array pointer is: %p\n", runner->transitionIntervals);
+    printf("d_array size is: %llu\n", (unsigned long long)runner->transitionIntervals->size);
+
+    for (int i = 0; i < runner->transitionIntervals->size; i++) {
+      printf("%d. CudaDynamicArray<CudaInterval> inside dobbel aray\n", i);
+      printf("Has Size: %llu, and Capacity: %llu\n", (unsigned long long)runner->transitionIntervals->arr[i]->size,
+             (unsigned long long)runner->transitionIntervals->arr[i]->capacity);
+      for (int j = 0; j < runner->transitionIntervals->arr[i]->size; j++) {
+        printf("Intervals contained in %d CudaDynamicArray<CudaIntervals> are: low: %f high: %f\n", i,
+               runner->transitionIntervals->arr[i]->arr->low, runner->transitionIntervals->arr[i]->arr->high);
+      }
     }
   }
 };
@@ -217,11 +234,29 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   auto allocResult = allocator.allocate(runner, cipMarking, blocks, threadsPerBlock);
 
+  int successCountVal = 0;
+  int *successCount;
+  cudaMalloc(&successCount, sizeof(int));
+  cudaMemcpy(successCount, &successCountVal, sizeof(int), cudaMemcpyHostToDevice);
+
+  int *runsNeeded;
+  cudaMalloc(&runsNeeded, sizeof(int));
+  cudaMemcpy(runsNeeded, &this->runsNeeded, sizeof(int), cudaMemcpyHostToDevice);
+
+  int rand_seed_val = 1234;
+  int *rand_seed;
+  cudaMalloc(&rand_seed, sizeof(int));
+  cudaMemcpy(rand_seed, &rand_seed_val, sizeof(int), cudaMemcpyHostToDevice);
+
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
 
-  testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
-  // Allocate the initial marking
+  cudaDeviceSetLimit(cudaLimitStackSize, 256 * 1024);
+
+  // testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
+
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, 1>>>(runResultDevice, successCount, runsNeeded,
+                                                                  runner->rngStates, rand_seed);
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -237,24 +272,6 @@ bool AtlerProbabilityEstimation::runCuda() {
   //   std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
   // } else {
   //   std::cout << "Device memory for curand allocated successfully." << std::endl;
-  // }
-
-  std::cout << "Run prepare" << std::endl;
-
-  // VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threads>>>(
-  //     stapn, ciMarking, cudaSMCQuery, runres, smcSettings.timeBound, smcSettings.stepBound, 0, runsNeeded);
-
-  // cudaError_t err = cudaGetLastError();
-  // if (err != cudaSuccess) {
-  //   std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
-  //   return false;
-  // }
-
-  // err = cudaDeviceSynchronize();
-
-  // if (err != cudaSuccess) {
-  //   std::cerr << "CUDA device synchronization failed: " << cudaGetErrorString(err) << std::endl;
-  //   return false;
   // }
 
   std::cout << "Kernel execution completed successfully." << std::endl;

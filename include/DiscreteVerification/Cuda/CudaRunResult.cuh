@@ -1,6 +1,7 @@
 #ifndef VERIFYTAPN_CUDA_RUNGEN_CHU_
 #define VERIFYTAPN_CUDA_RUNGEN_CHU_
 
+#include "DiscreteVerification/Atler/SimpleTimeInvariant.hpp"
 #include "DiscreteVerification/Cuda/CudaDeque.cuh"
 #include "DiscreteVerification/Cuda/CudaDynamicArray.cuh"
 #include "DiscreteVerification/Cuda/CudaInterval.cuh"
@@ -12,7 +13,6 @@
 #include "DiscreteVerification/Cuda/CudaTimedOutputArc.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedPlace.cuh"
 #include "DiscreteVerification/Cuda/CudaTimedTransition.cuh"
-#include "DiscreteVerification/Atler/SimpleTimeInvariant.hpp"
 
 #include <cuda_runtime.h>
 #include <curand.h>
@@ -213,7 +213,7 @@ struct CudaRunResult {
   // choose weightedWinner
 
   __device__ CudaTimedTransition *chooseWeightedWinner(const CudaDynamicArray<size_t> winner_indexes,
-                                                                curandState *local_r_state) {
+                                                       curandState *local_r_state) {
     double total_weight = 0;
     CudaDynamicArray<size_t> infinite_weights(10);
     for (size_t i = 0; i < winner_indexes.size; i++) {
@@ -250,8 +250,9 @@ struct CudaRunResult {
     return tapn->transitions[winner_indexes.get(0)];
   }
 
-  __device__ CudaDynamicArray<Util::CudaInterval>
-  transitionFiringDates(const CudaTimedTransition &transition) {
+  __device__ CudaDynamicArray<Util::CudaInterval> transitionFiringDates(const CudaTimedTransition &transition) {
+    printf("transition: %s\n", transition.name);
+    printf("transition.presetLength: %d\n", transition.presetLength);
     auto initialFiringIntervals = CudaDynamicArray<Util::CudaInterval>(10);
 
     initialFiringIntervals.add(Util::CudaInterval(0, HUGE_VAL));
@@ -271,13 +272,14 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
+      printf("arc->inputPlace->index: %s\n", arc->inputPlace->name);
       CudaRealPlace *place = realMarking->places[arc->inputPlace->index];
       if (place->isEmpty()) {
         return CudaDynamicArray(disabled);
       }
 
       auto newFiringIntevals = Util::setIntersection(firingIntervalsStack.front->data,
-                                                     arcFiringDates(arc->interval, arc->weight, *place->tokens));
+                                                     arcFiringDates(&arc->interval, &(arc->weight), place->tokens));
       firingIntervalsStack.push_front(newFiringIntevals);
 
       if (newFiringIntevals.empty()) {
@@ -294,13 +296,13 @@ struct CudaRunResult {
       }
 
       Atler::SimpleTimeInvariant targetInvariant = transport->destination->timeInvariant;
-      CudaTimeInterval arcInterval = transport->interval;
-      if (targetInvariant.bound < arcInterval.upperBound) {
-        arcInterval.setUpperBound(targetInvariant.bound, targetInvariant.isBoundStrict);
+      CudaTimeInterval *arcInterval = &transport->interval;
+      if (targetInvariant.bound < arcInterval->upperBound) {
+        arcInterval->setUpperBound(targetInvariant.bound, targetInvariant.isBoundStrict);
       }
 
       auto newFiringIntevals = Util::setIntersection(firingIntervalsStack.front->data,
-                                                     arcFiringDates(arcInterval, transport->weight, *place->tokens));
+                                                     arcFiringDates(arcInterval, &(transport->weight), place->tokens));
       firingIntervalsStack.push_front(newFiringIntevals);
 
       if (newFiringIntevals.empty()) {
@@ -312,28 +314,28 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<Util::CudaInterval>
-  arcFiringDates(CudaTimeInterval time_interval, const uint32_t weight, CudaDynamicArray<CudaRealToken *> &tokens) {
-    Util::CudaInterval arcInterval(time_interval.lowerBound, time_interval.upperBound);
+  arcFiringDates(CudaTimeInterval *time_interval, const uint32_t *weight, CudaDynamicArray<CudaRealToken *> *tokens) {
+    Util::CudaInterval arcInterval(time_interval->lowerBound, time_interval->upperBound);
 
     size_t total_tokens = 0;
-    for (size_t i = 0; i < tokens.size; i++) {
-      total_tokens += tokens.get(i)->count;
+    for (size_t i = 0; i < tokens->size; i++) {
+      total_tokens += tokens->get(i)->count;
     }
 
-    if (total_tokens < weight) {
+    if (total_tokens < *weight) {
       return CudaDynamicArray<Util::CudaInterval>();
     }
 
     CudaDynamicArray<Util::CudaInterval> firingIntervals = CudaDynamicArray<Util::CudaInterval>(10);
 
     CudaDeque<double> selected = CudaDeque<double>();
-    for (size_t i = 0; i < tokens.size; i++) {
-      for (int j = 0; j < tokens.get(i)->count; j++) {
-        selected.push_back(tokens.get(i)->age);
-        if (selected.size > weight) {
+    for (size_t i = 0; i < tokens->size; i++) {
+      for (int j = 0; j < tokens->get(i)->count; j++) {
+        selected.push_back(tokens->get(i)->age);
+        if (selected.size > *weight) {
           selected.pop_front();
         }
-        if (selected.size == weight) {
+        if (selected.size == *weight) {
           Util::CudaInterval tokenSetInterval(0, HUGE_VAL);
           for (size_t k = 0; k < selected.size; k++) {
             Util::CudaInterval shifted = arcInterval;
@@ -349,8 +351,8 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<CudaRealToken> removeRandom(CudaDynamicArray<CudaRealToken *> &tokenList,
-                                                                   const CudaTimeInterval &timeInterval,
-                                                                   const int weight, curandState *local_r_state) {
+                                                          const CudaTimeInterval &timeInterval, const int weight,
+                                                          curandState *local_r_state) {
     auto res = CudaDynamicArray<CudaRealToken>(10);
     int remaining = weight;
     size_t tok_index = CudaSMC::getRandomTokenIndex(local_r_state, tokenList.size - 1);
@@ -379,8 +381,8 @@ struct CudaRunResult {
     return CudaDynamicArray<CudaRealToken>(res);
   }
 
-  __device__ CudaDynamicArray<CudaRealToken>
-  removeYoungest(CudaDynamicArray<CudaRealToken *> &tokenList, const CudaTimeInterval &timeInterval, const int weight) {
+  __device__ CudaDynamicArray<CudaRealToken> removeYoungest(CudaDynamicArray<CudaRealToken *> &tokenList,
+                                                            const CudaTimeInterval &timeInterval, const int weight) {
     auto res = CudaDynamicArray<CudaRealToken>(10);
     int remaining = weight;
     for (size_t i = 0; i < tokenList.size; i++) {
@@ -410,8 +412,8 @@ struct CudaRunResult {
     return CudaDynamicArray<CudaRealToken>(res);
   }
 
-  __device__ CudaDynamicArray<CudaRealToken>
-  removeOldest(CudaDynamicArray<CudaRealToken *> &tokenList, const CudaTimeInterval &timeInterval, const int weight) {
+  __device__ CudaDynamicArray<CudaRealToken> removeOldest(CudaDynamicArray<CudaRealToken *> &tokenList,
+                                                          const CudaTimeInterval &timeInterval, const int weight) {
     auto res = CudaDynamicArray<CudaRealToken>(10);
     int remaining = weight;
     for (size_t i = 0; i < tokenList.size; i++) {
@@ -476,7 +478,8 @@ struct CudaRunResult {
       CudaRealPlace *place = placeList[transport->source->index];
       CudaDynamicArray<CudaRealToken *> *tokenList = place->tokens;
       CudaTimeInterval &arcInterval = transport->interval;
-      CudaDynamicArray<CudaRealToken> consumed = switcher(transition, tokenList, arcInterval, transport->weight, local_r_state);
+      CudaDynamicArray<CudaRealToken> consumed =
+          switcher(transition, tokenList, arcInterval, transport->weight, local_r_state);
 
       if (destInv < arcInterval.upperBound) {
         arcInterval.setUpperBound(destInv, false);
@@ -522,9 +525,9 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<CudaRealToken> switcher(CudaTimedTransition *transition,
-                                                               CudaDynamicArray<CudaRealToken *> *tokens,
-                                                               CudaTimeInterval &interval, int weight,
-                                                               curandState *local_r_state) {
+                                                      CudaDynamicArray<CudaRealToken *> *tokens,
+                                                      CudaTimeInterval &interval, int weight,
+                                                      curandState *local_r_state) {
 
     switch (transition->_firingMode) {
     case CudaSMC::FiringMode::Random:
