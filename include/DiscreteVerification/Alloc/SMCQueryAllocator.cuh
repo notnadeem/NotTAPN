@@ -38,175 +38,136 @@ struct SMCQueryAllocator {
   }
 
 __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
+    CudaExpression* temp_expr = (CudaExpression*)malloc(sizeof(CudaExpression));
+    if (temp_expr == nullptr) {
+        printf("Failed to allocate memory for expression on host\n");
+        return nullptr;
+    }
 
-    printf("Allocating expression of type: %d\n", h_expr->getType());
+    temp_expr->type = h_expr->type;
+    temp_expr->eval = h_expr->eval;
 
-    switch (h_expr->getType()) {
+    CudaExpression* d_expr;
+
+    switch (h_expr->type) {
         case NOT_EXPRESSION: {
-            Cuda::AST::NotExpression *d_expr;
-            CudaExpression *childDevice = allocateExpression(&(static_cast<Cuda::AST::NotExpression*>(h_expr))->getChild());
-
-            (static_cast<Cuda::AST::NotExpression*>(h_expr))->expr = childDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::NotExpression)), "Failed to allocate device memory for NotExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::NotExpression*>(h_expr), sizeof(Cuda::AST::NotExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy NotExpression to device");
-
-            return d_expr;
-        }
-        case DEADLOCK_EXPRESSION: {
-            Cuda::AST::DeadlockExpression *d_expr;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::DeadlockExpression)), "Failed to allocate device memory for DeadlockExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::DeadlockExpression*>(h_expr), sizeof(Cuda::AST::DeadlockExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy DeadlockExpression to device");
-            return d_expr;
-        }
-        case BOOL_EXPRESSION: {
-            Cuda::AST::BoolExpression *d_expr;
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::BoolExpression)), "Failed to allocate device memory for BoolExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::BoolExpression*>(h_expr), sizeof(Cuda::AST::BoolExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy BoolExpression to device");
-
-            return d_expr;
-        }
-        case ATOMIC_PROPOSITION: {
-            Cuda::AST::AtomicProposition *d_expr;
-            Cuda::AST::ArithmeticExpression *leftDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::AtomicProposition*>(h_expr))->getLeft());
-            Cuda::AST::ArithmeticExpression *rightDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::AtomicProposition*>(h_expr))->getRight());
-
-            Cuda::AST::AtomicProposition* temp_casted = static_cast<Cuda::AST::AtomicProposition*>(h_expr);
-
-            (static_cast<Cuda::AST::AtomicProposition*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::AtomicProposition*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::AtomicProposition)), "Failed to allocate device memory for AtomicProposition");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::AtomicProposition*>(h_expr), sizeof(Cuda::AST::AtomicProposition), cudaMemcpyHostToDevice),
-                        "Failed to copy AtomicProposition to device");
-
-            Cuda::AST::AtomicProposition *h_temp = (Cuda::AST::AtomicProposition *)malloc(sizeof(Cuda::AST::AtomicProposition));
-            cudaMemcpy(h_temp, d_expr, sizeof(Cuda::AST::AtomicProposition), cudaMemcpyDeviceToHost);
-
-            return d_expr;
-        }
-        case AND_EXPRESSION: {
-            Cuda::AST::AndExpression *d_expr;
-            CudaExpression *leftDevice = allocateExpression(&(static_cast<Cuda::AST::AndExpression*>(h_expr))->getLeft());
-            CudaExpression *rightDevice = allocateExpression(&(static_cast<Cuda::AST::AndExpression*>(h_expr))->getRight());
-
-            (static_cast<Cuda::AST::AndExpression*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::AndExpression*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::AndExpression)), "Failed to allocate device memory for AndExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::AndExpression*>(h_expr), sizeof(Cuda::AST::AndExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy AndExpression to device");
-
-            Cuda::AST::AndExpression *h_temp = (Cuda::AST::AndExpression *)malloc(sizeof(Cuda::AST::AndExpression));
-            cudaMemcpy(h_temp, d_expr, sizeof(Cuda::AST::AndExpression), cudaMemcpyDeviceToHost);
-
-            return d_expr;
-        }
-        case OR_EXPRESSION: {
-            Cuda::AST::OrExpression *d_expr;
-            CudaExpression *leftDevice = allocateExpression(&(static_cast<Cuda::AST::OrExpression*>(h_expr))->getLeft());
-            CudaExpression *rightDevice = allocateExpression(&(static_cast<Cuda::AST::OrExpression*>(h_expr))->getRight());
-
-            (static_cast<Cuda::AST::OrExpression*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::OrExpression*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::OrExpression)), "Failed to allocate device memory for OrExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::OrExpression*>(h_expr), sizeof(Cuda::AST::OrExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy OrExpression to device");
-
-            return d_expr;
-        }
-        default: {
-            printf("Unsupported CudaExpression type for allocation\n");
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate NOT_EXPRESSION on device");
+            temp_expr->notExpr = new Cuda::AST::NotExpression(h_expr->notExpr ? allocateExpression(h_expr->notExpr->expr) : nullptr);
             break;
         }
+        case DEADLOCK_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate DEADLOCK_EXPRESSION on device");
+            temp_expr->deadlockExpr = new Cuda::AST::DeadlockExpression();
+            break;
+        }
+        case BOOL_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate BOOL_EXPRESSION on device");
+            temp_expr->boolExpr = new Cuda::AST::BoolExpression(h_expr->boolExpr->value);
+            break;
+        }
+        case ATOMIC_PROPOSITION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate ATOMIC_PROPOSITION on device");
+            temp_expr->atomicProp = new Cuda::AST::AtomicProposition(
+                h_expr->atomicProp->left ? static_cast<Cuda::AST::ArithmeticExpression*>(allocateArithmeticExpression(h_expr->atomicProp->left)) : nullptr,
+                h_expr->atomicProp->op,
+                h_expr->atomicProp->right ? static_cast<Cuda::AST::ArithmeticExpression*>(allocateArithmeticExpression(h_expr->atomicProp->right)) : nullptr
+            );
+            break;
+        }
+        case AND_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate AND_EXPRESSION on device");
+            temp_expr->andExpr = new Cuda::AST::AndExpression(
+                h_expr->andExpr->left ? allocateExpression(h_expr->andExpr->left) : nullptr,
+                h_expr->andExpr->right ? allocateExpression(h_expr->andExpr->right) : nullptr
+            );
+            break;
+        }
+        case OR_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(CudaExpression)), "Failed to allocate OR_EXPRESSION on device");
+            temp_expr->orExpr = new Cuda::AST::OrExpression(
+                h_expr->orExpr->left ? allocateExpression(h_expr->orExpr->left) : nullptr,
+                h_expr->orExpr->right ? allocateExpression(h_expr->orExpr->right) : nullptr
+            );
+            break;
+        }
+        default:
+            printf("Unknown expression type: %d\n", h_expr->type);
+            break;
     }
+
+    checkCudaError(cudaMemcpy(d_expr, temp_expr, sizeof(CudaExpression), cudaMemcpyHostToDevice),
+                  "Failed to copy CudaExpression to device");
+
+    free(temp_expr);
+
+    return d_expr;
 }
 
 __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cuda::AST::ArithmeticExpression *h_expr) {
-    switch (h_expr->getType()) {
+    Cuda::AST::ArithmeticExpression* temp_expr = (Cuda::AST::ArithmeticExpression*)malloc(sizeof(Cuda::AST::ArithmeticExpression));
+    if (temp_expr == nullptr) {
+        printf("Failed to allocate memory for expression on host\n");
+        return nullptr;
+    }
+
+    temp_expr->type = h_expr->type;
+    temp_expr->eval = h_expr->eval;
+
+    Cuda::AST::ArithmeticExpression* d_expr;
+
+    switch (h_expr->type) {
         case PLUS_EXPRESSION: {
-            Cuda::AST::PlusExpression *d_expr;
-            Cuda::AST::ArithmeticExpression *leftDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::PlusExpression*>(h_expr))->getLeft());
-            Cuda::AST::ArithmeticExpression *rightDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::PlusExpression*>(h_expr))->getRight());
-
-            (static_cast<Cuda::AST::PlusExpression*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::PlusExpression*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::PlusExpression)), "Failed to allocate device memory for PlusExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::PlusExpression*>(h_expr), sizeof(Cuda::AST::PlusExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy PlusExpression to device");
-
-            return d_expr;
-        }
-        case SUBTRACT_EXPRESSION: {
-            Cuda::AST::SubtractExpression *d_expr;
-            Cuda::AST::ArithmeticExpression *leftDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::SubtractExpression*>(h_expr))->getLeft());
-            Cuda::AST::ArithmeticExpression *rightDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::SubtractExpression*>(h_expr))->getRight());
-
-            (static_cast<Cuda::AST::SubtractExpression*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::SubtractExpression*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::SubtractExpression)), "Failed to allocate device memory for SubtractExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::SubtractExpression*>(h_expr), sizeof(Cuda::AST::SubtractExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy SubtractExpression to device");
-
-            return d_expr;
-        }
-        case MINUS_EXPRESSION: {
-            Cuda::AST::MinusExpression *d_expr;
-            Cuda::AST::ArithmeticExpression *valueDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::MinusExpression*>(h_expr))->getValue());
-
-            (static_cast<Cuda::AST::MinusExpression*>(h_expr))->value = valueDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::MinusExpression)), "Failed to allocate device memory for MinusExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::MinusExpression*>(h_expr), sizeof(Cuda::AST::MinusExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy MinusExpression to device");
-
-            return d_expr;
-        }
-        case MULTIPLY_EXPRESSION: {
-            Cuda::AST::MultiplyExpression *d_expr;
-            Cuda::AST::ArithmeticExpression *leftDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::MultiplyExpression*>(h_expr))->getLeft());
-            Cuda::AST::ArithmeticExpression *rightDevice = allocateArithmeticExpression(&(static_cast<Cuda::AST::MultiplyExpression*>(h_expr))->getRight());
-
-            (static_cast<Cuda::AST::MultiplyExpression*>(h_expr))->left = leftDevice;
-            (static_cast<Cuda::AST::MultiplyExpression*>(h_expr))->right = rightDevice;
-
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::MultiplyExpression)), "Failed to allocate device memory for MultiplyExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::MultiplyExpression*>(h_expr), sizeof(Cuda::AST::MultiplyExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy MultiplyExpression to device");
-
-            return d_expr;
-        }
-        case NUMBER_EXPRESSION: {
-            Cuda::AST::NumberExpression *d_expr;
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::NumberExpression)), "Failed to allocate device memory for NumberExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::NumberExpression*>(h_expr), sizeof(Cuda::AST::NumberExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy NumberExpression to device");
-
-            return d_expr;
-        }
-        case IDENTIFIER_EXPRESSION: {
-            Cuda::AST::IdentifierExpression *d_expr;
-            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::IdentifierExpression)), "Failed to allocate device memory for IdentifierExpression");
-            checkCudaError(cudaMemcpy(d_expr, static_cast<Cuda::AST::IdentifierExpression*>(h_expr), sizeof(Cuda::AST::IdentifierExpression), cudaMemcpyHostToDevice),
-                        "Failed to copy IdentifierExpression to device");            
-
-            Cuda::AST::IdentifierExpression *h_temp = (Cuda::AST::IdentifierExpression *)malloc(sizeof(Cuda::AST::IdentifierExpression));
-            cudaMemcpy(h_temp, d_expr, sizeof(Cuda::AST::IdentifierExpression), cudaMemcpyDeviceToHost);
-
-            return d_expr;
-        }
-        default: {
-            printf("Unsupported ArithmeticExpression type for allocation\n");
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate PLUS_EXPRESSION on device");
+            temp_expr->plusExpr = new Cuda::AST::PlusExpression(
+                h_expr->plusExpr->left ? allocateArithmeticExpression(h_expr->plusExpr->left) : nullptr,
+                h_expr->plusExpr->right ? allocateArithmeticExpression(h_expr->plusExpr->right) : nullptr
+            );
             break;
         }
+        case SUBTRACT_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate SUBTRACT_EXPRESSION on device");
+            temp_expr->subtractExpr = new Cuda::AST::SubtractExpression(
+                h_expr->subtractExpr->left ? allocateArithmeticExpression(h_expr->subtractExpr->left) : nullptr,
+                h_expr->subtractExpr->right ? allocateArithmeticExpression(h_expr->subtractExpr->right) : nullptr
+            );
+            break;
+        }
+        case MINUS_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate MINUS_EXPRESSION on device");
+            temp_expr->minusExpr = new Cuda::AST::MinusExpression(
+                h_expr->minusExpr->value ? allocateArithmeticExpression(h_expr->minusExpr->value) : nullptr
+            );
+            break;
+        }
+        case MULTIPLY_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate MULTIPLY_EXPRESSION on device");
+            temp_expr->multiplyExpr = new Cuda::AST::MultiplyExpression(
+                h_expr->multiplyExpr->left ? allocateArithmeticExpression(h_expr->multiplyExpr->left) : nullptr,
+                h_expr->multiplyExpr->right ? allocateArithmeticExpression(h_expr->multiplyExpr->right) : nullptr
+            );
+            break;
+        }
+        case NUMBER_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate NUMBER_EXPRESSION on device");
+            temp_expr->numberExpr = new Cuda::AST::NumberExpression(h_expr->numberExpr->value);
+            break;
+        }
+        case IDENTIFIER_EXPRESSION: {
+            checkCudaError(cudaMalloc(&d_expr, sizeof(Cuda::AST::ArithmeticExpression)), "Failed to allocate IDENTIFIER_EXPRESSION on device");
+            temp_expr->identifierExpr = new Cuda::AST::IdentifierExpression(h_expr->identifierExpr->place);
+            break;
+        }
+        default:
+            printf("Unknown ArithmeticExpression type: %d\n", h_expr->type);
+            break;
     }
+
+    checkCudaError(cudaMemcpy(d_expr, temp_expr, sizeof(Cuda::AST::ArithmeticExpression), cudaMemcpyHostToDevice),
+                  "Failed to copy ArithmeticExpression to device");
+
+    free(temp_expr);
+
+    return d_expr;
 }
 
   __host__ static void checkCudaError(cudaError_t result, const char *msg) {
