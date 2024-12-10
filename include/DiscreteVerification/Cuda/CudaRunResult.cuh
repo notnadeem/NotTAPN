@@ -33,8 +33,6 @@ struct CudaRunResult {
 
   uint numericPrecision = 0;
 
-  curandState_t *rngStates;
-
   __host__ __device__ CudaRunResult(CudaTimedArcPetriNet *tapn, CudaRealMarking *srm,
                                     const unsigned int numericPrecision = 0)
       : tapn(tapn), realMarking(srm), numericPrecision(numericPrecision) {

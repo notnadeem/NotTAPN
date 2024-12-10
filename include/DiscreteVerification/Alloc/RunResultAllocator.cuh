@@ -17,9 +17,6 @@ struct RunResultAllocator {
   allocate(CudaRunResult *h_run_result, CudaRealMarking *h_marking, int blocks, int threadsPerBlock) {
     int numThreads = blocks * threadsPerBlock;
 
-    // Allocate device memory for rngStates
-    cudaMalloc(&(h_run_result->rngStates), numThreads * sizeof(curandState_t));
-
     // Allocate device memory for CudaRunResult
     CudaRunResult *runResultDevice;
     cudaMalloc(&runResultDevice, sizeof(CudaRunResult));
