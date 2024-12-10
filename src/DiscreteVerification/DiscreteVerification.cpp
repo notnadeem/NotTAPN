@@ -392,7 +392,7 @@ void AtlerComputeAndPrint(TAPN::TimedArcPetriNet &tapn, AtlerProbabilityEstimati
 
   bool res =estimator.run();
 
-  std::cout << "Query is " << (res ? "satisfied" : "NOT satisfied") << "." << std::endl;
+  // std::cout << "Query is " << (res ? "satisfied" : "NOT satisfied") << "." << std::endl;
 
   // if (options.isParallel()) {
   //   estimator.parallel_run();

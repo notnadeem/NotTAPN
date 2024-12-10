@@ -11,10 +11,10 @@
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
 // #include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
+#include <atomic>
 #include <iomanip>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 std::string printDoubleo(double value, unsigned int precision) {
   std::ostringstream oss;
@@ -49,8 +49,9 @@ bool AtlerProbabilityEstimation::run() {
 
   int count = 0;
   int success = 0;
-  // for runsNeeded timed
-  Atler::AtlerRunResult *original = new Atler::AtlerRunResult(&stapn, siMarking);
+
+  Atler::AtlerRunResult *original =
+      new Atler::AtlerRunResult(&stapn, siMarking);
 
   auto clones =
       new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
@@ -61,14 +62,12 @@ bool AtlerProbabilityEstimation::run() {
     std::cout << "Clone " << i << " is prepared" << std::endl;
   }
 
-  // Get number of threads
   size_t threads_no = std::thread::hardware_concurrency();
   std::cout << ". Using " << threads_no << " threads..." << std::endl;
 
   std::atomic<int> atomic_success{0};
   std::vector<std::thread> threads;
 
-  // Split work among threads
   int runs_per_thread = runsNeeded / threads_no;
   int remaining_runs = runsNeeded % threads_no;
 
@@ -92,16 +91,10 @@ bool AtlerProbabilityEstimation::run() {
       }
 
       count++;
-      if (simpleSMCQuery->getQuantifier() == Atler::PG) {
-        std::cout << "Number of runs: " << count << std::endl;
-        std::cout << "Failed runs: " << atomic_success << std::endl;
-      }
-
       delete res;
     }
   };
 
-  // Launch threads
   int start = 0;
   for (size_t i = 0; i < threads_no; i++) {
     int chunk = runs_per_thread + (i < remaining_runs ? 1 : 0);
@@ -109,14 +102,16 @@ bool AtlerProbabilityEstimation::run() {
     start += chunk;
   }
 
-  // Wait for all threads to complete
-  for (auto& thread : threads) {
+  for (auto &thread : threads) {
     thread.join();
   }
 
   success = atomic_success.load();
 
-  return false;
+  std::cout << "\nPF: Success rate / PG: Failure rate:\n"
+            << success / (double)runsNeeded << std::endl;
+
+  return true;
 }
 
 bool AtlerProbabilityEstimation::reachedRunBound(
