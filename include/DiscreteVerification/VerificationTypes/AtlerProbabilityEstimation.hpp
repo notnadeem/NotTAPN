@@ -59,7 +59,6 @@ class AtlerProbabilityEstimation  {
       void computeChernoffHoeffdingBound(const float intervalWidth,
                                          const float confidence);
       bool reachedRunBound(Atler::AtlerRunResult *generator);
-      bool reachedRunBound2(Atler::AtlerRunResult2 *generator);
       // void handleRunResult(const bool res, int steps, double delay);
 
       // Printing and output methods
