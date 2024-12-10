@@ -38,19 +38,19 @@ template <typename T> struct CudaDynamicArray {
     }
   }
 
-  __host__ __device__ void resize() {
-    capacity *= 2;
-    T *temp = new T[capacity];
+  __host__ __device__ void resize(size_t newCapacity) {
+    T *temp = new T[newCapacity];
     for (size_t i = 0; i < size; i++) {
       temp[i] = arr[i];
     }
     delete[] arr;
     arr = temp;
+    capacity = newCapacity;
   }
 
   __host__ __device__ void add(T value) {
     if (size >= capacity) {
-      resize();
+      resize(capacity * 2);
     }
     arr[size++] = value;
   }
@@ -62,7 +62,7 @@ template <typename T> struct CudaDynamicArray {
       printf("Index out of bounds: insert operation");
     }
     if (size >= capacity) {
-      resize();
+      resize(capacity * 2);
     }
     for (size_t i = size - 1; i >= index; i--) {
       arr[i + 1] = arr[i];
@@ -74,9 +74,10 @@ template <typename T> struct CudaDynamicArray {
   __host__ __device__ void insert2(size_t index, T value) {
     if (index > size) { // Allow inserting at the end
       printf("Index out of bounds: insert operation");
+      return;
     }
     if (size >= capacity) {
-      resize();
+      resize(capacity * 2);
     }
     // Shift elements to the right starting from the end
     for (size_t i = size; i > index; i--) {
@@ -95,12 +96,18 @@ template <typename T> struct CudaDynamicArray {
       arr[i] = arr[i + 1];
     }
     size--;
+
+    // Shrink the array if its 1/4th capacity
+    if (size > 0 && size <= capacity / 4) {
+      resize(capacity / 2);
+    }
   }
 
   // NOTE: This might not be necessary for the implementation of the algorithm
   __host__ __device__ void remove(size_t index, size_t count) {
     if (index >= size) {
       printf("Index out of bounds: remove multiple operation");
+      return;
     }
     for (size_t i = index; i < size - count; i++) {
       arr[i] = arr[i + count];
@@ -129,6 +136,6 @@ template <typename T> struct CudaDynamicArray {
   __host__ __device__ bool empty() const { return size == 0; }
 };
 
-} // namespace VerifyTAPN::Atler
+} // namespace VerifyTAPN::Cuda
 
 #endif
