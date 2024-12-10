@@ -98,6 +98,7 @@ if(VERIFYDTAPN_GetDependencies)
     URL_HASH
       SHA512=6c10583e6631ccdb0217d0a5381172cb4c1046226de6ef1acf398d85e81d145228e14c3016aefcd7b70a1db8631505b048d8b4f5d4b0dbf1811d2482eefdd265
     BUILD_COMMAND ""
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND mkdir -p ${CMAKE_BINARY_DIR}/external/include
     INSTALL_COMMAND
       cd ../rapidxml-ext && ${CMAKE_COMMAND} -E copy rapidxml.hpp
@@ -141,6 +142,7 @@ if(VERIFYDTAPN_GetDependencies)
     PATCH_COMMAND echo "${BOOST_CONFIG_JAM}" $<SEMICOLON> > config.jam
     CONFIGURE_COMMAND ./bootstrap.sh --prefix=${CMAKE_BINARY_DIR}/external
                       cxxflags="-arch x86_64" --without-icu
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     BUILD_COMMAND
       ./b2 --user-config=config.jam --prefix=${CMAKE_BINARY_DIR}/external
       --with-program_options cxxstd=17 cflags="-fPIC" cxxflags="-fPIC"
@@ -156,6 +158,7 @@ if(VERIFYDTAPN_GetDependencies)
       CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} ./configure
       --prefix=${CMAKE_BINARY_DIR}/external CXXFLAGS=-std=c++11
       ${SPARSEHASH_HOST}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     BUILD_COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make
     INSTALL_COMMAND make install
     BUILD_IN_SOURCE 1)

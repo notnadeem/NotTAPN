@@ -23,7 +23,11 @@ class CudaSMCQuery : public AST::CudaQuery {
 public:
   __host__ __device__ CudaSMCQuery(AST::CudaQuantifier quantifier, CudaSMCSettings settings,
                  AST::CudaExpression *expr)
-      : AST::CudaQuery(quantifier, expr), smcSettings(settings) {};
+      : AST::CudaQuery(quantifier, expr), smcSettings(settings) {
+        this->expr = expr;
+        this->quantifier = quantifier;
+        this->smcSettings = settings;
+      };
 
   __host__ __device__ CudaSMCQuery(const CudaSMCQuery &other)
       : AST::CudaQuery(other.quantifier, other.expr->clone()),

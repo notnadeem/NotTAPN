@@ -21,39 +21,78 @@ private:
 };
 
 // Implementation
-inline VerifyTAPN::Cuda::AST::CudaExpression *CudaSMCQueryConverter::convert(const VerifyTAPN::AST::Expression *expr) {
-  if (const auto *notExpr = dynamic_cast<const VerifyTAPN::AST::NotExpression *>(expr)) {
-    return new AST::NotExpression(convert(&notExpr->getChild()));
-  } else if (const auto *deadlock = dynamic_cast<const VerifyTAPN::AST::DeadlockExpression *>(expr)) {
-    return new AST::DeadlockExpression();
-  } else if (const auto *boolExpr = dynamic_cast<const VerifyTAPN::AST::BoolExpression *>(expr)) {
-    return new AST::BoolExpression(boolExpr->getValue());
-  } else if (const auto *atomic = dynamic_cast<const VerifyTAPN::AST::AtomicProposition *>(expr)) {
-    return new AST::AtomicProposition(convert(&atomic->getLeft()), convertOperator(atomic->getOperator()),
-                                             convert(&atomic->getRight()));
-  } else if (const auto *andExpr = dynamic_cast<const VerifyTAPN::AST::AndExpression *>(expr)) {
-    return new AST::AndExpression(convert(&andExpr->getLeft()), convert(&andExpr->getRight()));
-  } else if (const auto *orExpr = dynamic_cast<const VerifyTAPN::AST::OrExpression *>(expr)) {
-    return new AST::OrExpression(convert(&orExpr->getLeft()), convert(&orExpr->getRight()));
-  }
-  return nullptr;
+inline VerifyTAPN::Cuda::AST::CudaExpression* CudaSMCQueryConverter::convert(const VerifyTAPN::AST::Expression* expr) {
+    using namespace VerifyTAPN::Cuda::AST;
+
+    CudaExpression* cudaExpr = new CudaExpression();
+
+    if (const auto* notExpr = dynamic_cast<const VerifyTAPN::AST::NotExpression*>(expr)) {
+        cudaExpr->type = NOT_EXPRESSION;
+        cudaExpr->notExpr = new NotExpression(convert(&notExpr->getChild()));
+        return cudaExpr;
+    } else if (const auto* deadlock = dynamic_cast<const VerifyTAPN::AST::DeadlockExpression*>(expr)) {
+        cudaExpr->type = DEADLOCK_EXPRESSION;
+        cudaExpr->deadlockExpr = new DeadlockExpression();
+        return cudaExpr;
+    } else if (const auto* boolExpr = dynamic_cast<const VerifyTAPN::AST::BoolExpression*>(expr)) {
+        cudaExpr->type = BOOL_EXPRESSION;
+        cudaExpr->boolExpr = new BoolExpression(boolExpr->getValue());
+        return cudaExpr;
+    } else if (const auto* atomic = dynamic_cast<const VerifyTAPN::AST::AtomicProposition*>(expr)) {
+        cudaExpr->type = ATOMIC_PROPOSITION;
+        cudaExpr->atomicProp = new AtomicProposition(
+            convert(&atomic->getLeft()), 
+            convertOperator(atomic->getOperator()),
+            convert(&atomic->getRight())
+        );
+        return cudaExpr;
+    } else if (const auto* andExpr = dynamic_cast<const VerifyTAPN::AST::AndExpression*>(expr)) {
+        cudaExpr->type = AND_EXPRESSION;
+        cudaExpr->andExpr = new AndExpression(convert(&andExpr->getLeft()), convert(&andExpr->getRight()));
+        return cudaExpr;
+    } else if (const auto* orExpr = dynamic_cast<const VerifyTAPN::AST::OrExpression*>(expr)) {
+        cudaExpr->type = OR_EXPRESSION;
+        cudaExpr->orExpr = new OrExpression(convert(&orExpr->getLeft()), convert(&orExpr->getRight()));
+        return cudaExpr;
+    }
+
+    delete cudaExpr;
+    return nullptr;
 }
 
-inline AST::ArithmeticExpression *CudaSMCQueryConverter::convert(VerifyTAPN::AST::ArithmeticExpression *expr) {
-  if (auto *plus = dynamic_cast<VerifyTAPN::AST::PlusExpression *>(expr)) {
-    return new AST::PlusExpression(convert(&plus->getLeft()), convert(&plus->getRight()));
-  } else if (auto *subtract = dynamic_cast<VerifyTAPN::AST::SubtractExpression *>(expr)) {
-    return new AST::SubtractExpression(convert(&subtract->getLeft()), convert(&subtract->getRight()));
-  } else if (const auto *minus = dynamic_cast<const VerifyTAPN::AST::MinusExpression *>(expr)) {
-    return new AST::MinusExpression(convert(&minus->getValue()));
-  } else if (auto *multiply = dynamic_cast<VerifyTAPN::AST::MultiplyExpression *>(expr)) {
-    return new AST::MultiplyExpression(convert(&multiply->getLeft()), convert(&multiply->getRight()));
-  } else if (const auto *number = dynamic_cast<const VerifyTAPN::AST::NumberExpression *>(expr)) {
-    return new AST::NumberExpression(number->getValue());
-  } else if (const auto *identifier = dynamic_cast<const VerifyTAPN::AST::IdentifierExpression *>(expr)) {
-    return new AST::IdentifierExpression(identifier->getPlace());
-  }
-  return nullptr;
+inline VerifyTAPN::Cuda::AST::ArithmeticExpression* CudaSMCQueryConverter::convert(VerifyTAPN::AST::ArithmeticExpression* expr) {
+    using namespace VerifyTAPN::Cuda::AST;
+
+    ArithmeticExpression* arithmeticExpr = new ArithmeticExpression();
+
+    if (auto *plus = dynamic_cast<VerifyTAPN::AST::PlusExpression*>(expr)) {
+        arithmeticExpr->type = PLUS_EXPRESSION;
+        arithmeticExpr->plusExpr = new PlusExpression(convert(&plus->getLeft()), convert(&plus->getRight()));
+        return arithmeticExpr;
+    } else if (auto *subtract = dynamic_cast<VerifyTAPN::AST::SubtractExpression*>(expr)) {
+        arithmeticExpr->type = SUBTRACT_EXPRESSION;
+        arithmeticExpr->subtractExpr = new SubtractExpression(convert(&subtract->getLeft()), convert(&subtract->getRight()));
+        return arithmeticExpr;
+    } else if (const auto *minus = dynamic_cast<const VerifyTAPN::AST::MinusExpression*>(expr)) {
+        arithmeticExpr->type = MINUS_EXPRESSION;
+        arithmeticExpr->minusExpr = new MinusExpression(convert(&minus->getValue()));
+        return arithmeticExpr;
+    } else if (auto *multiply = dynamic_cast<VerifyTAPN::AST::MultiplyExpression*>(expr)) {
+        arithmeticExpr->type = MULTIPLY_EXPRESSION;
+        arithmeticExpr->multiplyExpr = new MultiplyExpression(convert(&multiply->getLeft()), convert(&multiply->getRight()));
+        return arithmeticExpr;
+    } else if (const auto *number = dynamic_cast<const VerifyTAPN::AST::NumberExpression*>(expr)) {
+        arithmeticExpr->type = NUMBER_EXPRESSION;
+        arithmeticExpr->numberExpr = new NumberExpression(number->getValue());
+        return arithmeticExpr;
+    } else if (const auto *identifier = dynamic_cast<const VerifyTAPN::AST::IdentifierExpression*>(expr)) {
+        arithmeticExpr->type = IDENTIFIER_EXPRESSION;
+        arithmeticExpr->identifierExpr = new IdentifierExpression(identifier->getPlace());
+        return arithmeticExpr;
+    }
+
+    delete arithmeticExpr;
+    return nullptr;
 }
 
 inline VerifyTAPN::Cuda::AST::CudaSMCSettings
@@ -71,9 +110,10 @@ CudaSMCQueryConverter::convertSMCSettings(const VerifyTAPN::AST::SMCSettings &se
 }
 
 inline VerifyTAPN::Cuda::AST::CudaSMCQuery *CudaSMCQueryConverter::convert(VerifyTAPN::AST::SMCQuery *query) {
-  return new VerifyTAPN::Cuda::AST::CudaSMCQuery(convertQuantifier(query->getQuantifier()),
+  VerifyTAPN::Cuda::AST::CudaSMCQuery* result = new VerifyTAPN::Cuda::AST::CudaSMCQuery(convertQuantifier(query->getQuantifier()),
                                                  convertSMCSettings(query->getSmcSettings()),
                                                  convert(&query->getConstChild()));
+  return result;
 }
 
 inline AST::AtomicProposition::op_e

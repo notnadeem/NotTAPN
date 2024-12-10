@@ -68,114 +68,101 @@ private:
 };
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::NotExpression &expr, AST::Result &context) {
-  AST::BoolResult c;
-  expr.getChild().accept(*this, c);
-  expr.eval = !c.value;
-  static_cast<AST::BoolResult &>(context).value = expr.eval;
+    AST::BoolResult c;
+    expr.expr->accept(*this, c);
+    static_cast<AST::BoolResult &>(context).value = !c.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::OrExpression &expr, AST::Result &context) {
-  AST::BoolResult left, right;
-  expr.getLeft().accept(*this, left);
-  // use lazy evaluation
-  if (left.value) {
-    static_cast<AST::BoolResult &>(context).value = true;
-  } else {
-    expr.getRight().accept(*this, right);
-    static_cast<AST::BoolResult &>(context).value = right.value;
-  }
-  expr.eval = static_cast<AST::BoolResult &>(context).value;
+    AST::BoolResult left, right;
+    expr.left->accept(*this, left);
+
+    if (left.value) {
+        static_cast<AST::BoolResult &>(context).value = true;
+    } else {
+        expr.right->accept(*this, right);
+        static_cast<AST::BoolResult &>(context).value = right.value;
+    }
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::AndExpression &expr, AST::Result &context) {
-  AST::BoolResult left, right;
-  expr.getLeft().accept(*this, left);
+    AST::BoolResult left, right;
+    expr.left->accept(*this, left);
 
-  // use lazy evaluation
-  if (!left.value) {
-    static_cast<AST::BoolResult &>(context).value = false;
-  } else {
-    expr.getRight().accept(*this, right);
-    static_cast<AST::BoolResult &>(context).value = right.value;
-  }
-  expr.eval = static_cast<AST::BoolResult &>(context).value;
+    if (!left.value) {
+        static_cast<AST::BoolResult &>(context).value = false;
+    } else {
+        expr.right->accept(*this, right);
+        static_cast<AST::BoolResult &>(context).value = right.value;
+    }
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::AtomicProposition &expr, AST::Result &context) {
-  AST::IntResult left;
-  expr.getLeft().accept(*this, left);
-  AST::IntResult right;
-  expr.getRight().accept(*this, right);
+    AST::IntResult left;
+    expr.left->accept(*this, left);
+    AST::IntResult right;
+    expr.right->accept(*this, right);
 
-  static_cast<AST::BoolResult &>(context).value = compare(left.value, expr.getOperator(), right.value);
-  expr.eval = static_cast<AST::BoolResult &>(context).value;
+    static_cast<AST::BoolResult &>(context).value = compare(left.value, expr.op, right.value);
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::BoolExpression &expr, AST::Result &context) {
-  static_cast<AST::BoolResult &>(context).value = expr.getValue();
-  expr.eval = expr.getValue();
+    static_cast<AST::BoolResult &>(context).value = expr.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::NumberExpression &expr, AST::Result &context) {
-  ((AST::IntResult &)context).value = expr.getValue();
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    ((AST::IntResult &)context).value = expr.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::IdentifierExpression &expr, AST::Result &context) {
-  ((AST::IntResult &)context).value = marking.numberOfTokensInPlace(expr.getPlace());
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    ((AST::IntResult &)context).value = marking.numberOfTokensInPlace(expr.place);
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::MultiplyExpression &expr, AST::Result &context) {
-  AST::IntResult left;
-  expr.getLeft().accept(*this, left);
-  AST::IntResult right;
-  expr.getRight().accept(*this, right);
-  ((AST::IntResult &)context).value = left.value * right.value;
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    AST::IntResult left;
+    expr.left->accept(*this, left);
+    AST::IntResult right;
+    expr.right->accept(*this, right);
+    ((AST::IntResult &)context).value = left.value * right.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::MinusExpression &expr, AST::Result &context) {
-  AST::IntResult value;
-  expr.getValue().accept(*this, value);
-  ((AST::IntResult &)context).value = -value.value;
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    AST::IntResult value;
+    expr.value->accept(*this, value);
+    ((AST::IntResult &)context).value = -value.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::SubtractExpression &expr, AST::Result &context) {
-  AST::IntResult left;
-  expr.getLeft().accept(*this, left);
-  AST::IntResult right;
-  expr.getRight().accept(*this, right);
-  ((AST::IntResult &)context).value = left.value - right.value;
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    AST::IntResult left;
+    expr.left->accept(*this, left);
+    AST::IntResult right;
+    expr.right->accept(*this, right);
+    ((AST::IntResult &)context).value = left.value - right.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::PlusExpression &expr, AST::Result &context) {
-  AST::IntResult left;
-  expr.getLeft().accept(*this, left);
-  AST::IntResult right;
-  expr.getRight().accept(*this, right);
-  ((AST::IntResult &)context).value = left.value + right.value;
-  expr.eval = static_cast<AST::IntResult &>(context).value;
+    AST::IntResult left;
+    expr.left->accept(*this, left);
+    AST::IntResult right;
+    expr.right->accept(*this, right);
+    ((AST::IntResult &)context).value = left.value + right.value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::CudaQuery &query, AST::Result &context) {
-  query.getChild()->accept(*this, context);
-  if (query.getQuantifier() == AST::AG || query.getQuantifier() == AST::AF ||
-      query.getQuantifier() == AST::PG) {
-    static_cast<AST::BoolResult &>(context).value = !static_cast<AST::BoolResult &>(context).value;
-  }
-  query.eval = static_cast<AST::BoolResult &>(context).value;
+    query.expr->accept(*this, context);
+    if (query.quantifier == AST::AG || query.quantifier == AST::AF ||
+        query.quantifier == AST::PG) {
+        static_cast<AST::BoolResult &>(context).value = !static_cast<AST::BoolResult &>(context).value;
+    }
+    query.eval = static_cast<AST::BoolResult &>(context).value;
 }
 
 __host__ __device__ void CudaQueryVisitor::visit(AST::DeadlockExpression &expr, AST::Result &context) {
-  if (!deadlockChecked) {
-    deadlockChecked = true;
-    deadlocked = marking.canDeadlock(tapn, maxDelay);
-  }
-  static_cast<AST::BoolResult &>(context).value = deadlocked;
-  expr.eval = static_cast<AST::BoolResult &>(context).value;
+    if (!deadlockChecked) {
+        deadlockChecked = true;
+        deadlocked = marking.canDeadlock(tapn, maxDelay);
+    }
+    static_cast<AST::BoolResult &>(context).value = deadlocked;
 }
 
 __host__ __device__ bool CudaQueryVisitor::compare(int numberOfTokensInPlace, AST::AtomicProposition::op_e op,

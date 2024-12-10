@@ -7,6 +7,7 @@
 #include "DiscreteVerification/Cuda/CudaSMCQueryConverter.cuh"
 #include "DiscreteVerification/Cuda/CudaTAPNConverter.cuh"
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
+#include "DiscreteVerification/Alloc/SMCQueryAllocator.cuh"
 
 #include <cuda_runtime.h>
 
@@ -195,6 +196,97 @@ __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *mar
   }
 };
 
+__global__ void testCudaSMCQueryAllocationKernel(CudaSMCQuery *query) {
+    printf("Kernel executed\n");
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0) return;
+
+    printf("Thread id: %d\n", tid);
+    printf("Quantifier: %d\n", query->getQuantifier());
+    printf("Time Bound: %d\n", query->getSmcSettings().timeBound);
+    printf("Step Bound: %d\n", query->getSmcSettings().stepBound);
+    printf("False Positives: %f\n", query->getSmcSettings().falsePositives);
+    printf("False Negatives: %f\n", query->getSmcSettings().falseNegatives);
+    printf("Indifference Region Up: %f\n", query->getSmcSettings().indifferenceRegionUp);
+    printf("Indifference Region Down: %f\n", query->getSmcSettings().indifferenceRegionDown);
+    printf("Confidence: %f\n", query->getSmcSettings().confidence);
+    printf("Estimation Interval Width: %f\n", query->getSmcSettings().estimationIntervalWidth);
+    printf("Compare To Float: %d\n", query->getSmcSettings().compareToFloat);
+    printf("Geq Than: %f\n", query->getSmcSettings().geqThan);
+
+    // // Print details of the expression
+    // CudaExpression *expr = query->getChild();
+    // switch (expr->type) {
+    //     case BOOL_EXPRESSION: {
+    //         Cuda::AST::BoolExpression *boolExpr = static_cast<Cuda::AST::BoolExpression*>(expr->boolExpr);
+    //         printf("Expression Type: BoolExpression\n");
+    //         printf("Value: %d\n", boolExpr->value);
+    //         break;
+    //     }
+    //     case NOT_EXPRESSION: {
+    //         Cuda::AST::NotExpression *notExpr = static_cast<Cuda::AST::NotExpression*>(expr->notExpr);
+    //         printf("Expression Type: NotExpression\n");
+    //         CudaExpression *childExpr = notExpr->expr;
+    //         if (childExpr->type == BOOL_EXPRESSION) {
+    //             Cuda::AST::BoolExpression *boolChildExpr = static_cast<Cuda::AST::BoolExpression*>(childExpr->boolExpr);
+    //             printf("Child Expression Type: BoolExpression\n");
+    //             printf("Child Value: %d\n", boolChildExpr->value);
+    //         }
+    //         break;
+    //     }
+    //     case DEADLOCK_EXPRESSION: {
+    //         printf("Expression Type: DeadlockExpression\n");
+    //         break;
+    //     }
+    //     case ATOMIC_PROPOSITION: {
+    //         Cuda::AST::AtomicProposition *atomicExpr = static_cast<Cuda::AST::AtomicProposition*>(expr->atomicProp);
+    //         printf("Expression Type: AtomicProposition\n");
+    //         Cuda::AST::ArithmeticExpression *leftExpr = atomicExpr->left;
+    //         Cuda::AST::ArithmeticExpression *rightExpr = atomicExpr->right;
+    //         printf("Left Child Expression Type: %d\n", leftExpr->type);
+    //         printf("Right Child Expression Type: %d\n", rightExpr->type);
+    //     }
+    //     case AND_EXPRESSION: {
+    //         Cuda::AST::AndExpression *andExpr = static_cast<Cuda::AST::AndExpression*>(expr->andExpr);
+    //         printf("Expression Type: AndExpression\n");
+    //         CudaExpression *leftExpr = andExpr->left;
+    //         if (leftExpr->type == BOOL_EXPRESSION) {
+    //             Cuda::AST::BoolExpression *boolLeftExpr = static_cast<Cuda::AST::BoolExpression*>(leftExpr->boolExpr);
+    //             printf("Left Child Expression Type: BoolExpression\n");
+    //             printf("Left Child Value: %d\n", boolLeftExpr->value);
+    //         }
+    //         CudaExpression *rightExpr = andExpr->right;
+    //         if (rightExpr->type == BOOL_EXPRESSION) {
+    //             Cuda::AST::BoolExpression *boolRightExpr = static_cast<Cuda::AST::BoolExpression*>(rightExpr->boolExpr);
+    //             printf("Right Child Expression Type: BoolExpression\n");
+    //             printf("Right Child Value: %d\n", boolRightExpr->value);
+    //         }
+    //         break;
+    //     }
+    //     case OR_EXPRESSION: {
+    //         Cuda::AST::OrExpression *orExpr = static_cast<Cuda::AST::OrExpression*>(expr->orExpr);
+    //         printf("Expression Type: OrExpression\n");
+    //         CudaExpression *leftExpr = orExpr->left;
+    //         if (leftExpr->type == BOOL_EXPRESSION) {
+    //             Cuda::AST::BoolExpression *boolLeftExpr = static_cast<Cuda::AST::BoolExpression*>(leftExpr->boolExpr);
+    //             printf("Left Child Expression Type: BoolExpression\n");
+    //             printf("Left Child Value: %d\n", boolLeftExpr->value);
+    //         }
+    //         CudaExpression *rightExpr = orExpr->right;
+    //         if (rightExpr->type == BOOL_EXPRESSION) {
+    //             Cuda::AST::BoolExpression *boolRightExpr = static_cast<Cuda::AST::BoolExpression*>(rightExpr->boolExpr);
+    //             printf("Right Child Expression Type: BoolExpression\n");
+    //             printf("Right Child Value: %d\n", boolRightExpr->value);
+    //         }
+    //         break;
+    //     }
+    //     default: {
+    //         printf("Unknown Expression Type: %d\n", expr->type);
+    //         break;
+    //     }
+    // }
+}
+
 bool AtlerProbabilityEstimation::runCuda() {
   std::cout << "Converting TAPN and marking..." << std::endl;
   auto result = VerifyTAPN::Cuda::CudaTAPNConverter::convert(tapn, initialMarking);
@@ -264,8 +356,20 @@ bool AtlerProbabilityEstimation::runCuda() {
     return false;
   }
 
-  err = cudaDeviceSynchronize();
-  // // Allocate the query
+  // Allocate the query
+  SMCQueryAllocator queryAllocator;
+  std::cout << "Allocating query" << std::endl;
+  CudaSMCQuery *d_cudaSMCQuery = queryAllocator.allocate(cudaSMCQuery);
+  std::cout << "Query Allocation done" << std::endl;
+
+  testCudaSMCQueryAllocationKernel<<<1, 1>>>(d_cudaSMCQuery);
+
+  err = cudaGetLastError();
+  if (err != cudaSuccess) {
+      std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+      return false;
+  }
+
 
   // cudaError_t allocStatus = cudaGetLastError();
   // if (allocStatus != cudaSuccess) {
