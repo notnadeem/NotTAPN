@@ -59,7 +59,6 @@ struct RunResultAllocator {
                  cudaMemcpyHostToDevice);
 
       temp_d_dates->arr = d_dates_arr;
-      temp_d_dates->ownsArray = h_run_result->datesSampled->ownsArray;
       temp_d_dates->size = h_run_result->datesSampled->size;
       temp_d_dates->capacity = h_run_result->datesSampled->capacity;
 
@@ -113,7 +112,6 @@ struct RunResultAllocator {
       temp_inner_struct->arr = d_intervals_arr;
       temp_inner_struct->size = h_transitionIntervals->arr[i]->size;
       temp_inner_struct->capacity = h_transitionIntervals->arr[i]->capacity;
-      temp_inner_struct->ownsArray = h_transitionIntervals->arr[i]->ownsArray;
 
       cudaMemcpy(d_inner_struct, temp_inner_struct, sizeof(CudaDynamicArray<CudaInterval>), cudaMemcpyHostToDevice);
 
@@ -135,7 +133,6 @@ struct RunResultAllocator {
     temp_transitionsIntervals->arr = d_outer_arr;
     temp_transitionsIntervals->size = h_transitionIntervals->size;
     temp_transitionsIntervals->capacity = h_transitionIntervals->capacity;
-    temp_transitionsIntervals->ownsArray = h_transitionIntervals->ownsArray;
 
     cudaMemcpy(d_transitionIntervals, temp_transitionsIntervals,
                sizeof(CudaDynamicArray<CudaDynamicArray<CudaInterval> *>), cudaMemcpyHostToDevice);

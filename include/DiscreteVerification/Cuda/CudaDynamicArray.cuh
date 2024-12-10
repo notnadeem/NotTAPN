@@ -9,13 +9,12 @@ template <typename T> struct CudaDynamicArray {
   T *arr;
   int size;
   size_t capacity;
-  bool ownsArray;
 
-  __host__ __device__ CudaDynamicArray() : size(0), capacity(1), ownsArray(true) {
+  __host__ __device__ CudaDynamicArray() : size(0), capacity(1) {
     arr = new T[capacity];
   }
 
-  __host__ __device__ CudaDynamicArray(size_t initialCapacity) : size(0), ownsArray(true) {
+  __host__ __device__ CudaDynamicArray(size_t initialCapacity) : size(0) {
     capacity = (initialCapacity == 0) ? 1 : initialCapacity;
     if (capacity == 0)
       capacity = 1;
@@ -25,7 +24,6 @@ template <typename T> struct CudaDynamicArray {
   __host__ __device__ CudaDynamicArray(const CudaDynamicArray<T> &other) {
     size = other.size;
     capacity = other.capacity;
-    ownsArray = other.ownsArray;
     arr = new T[capacity];
     for (size_t i = 0; i < size; i++) {
       arr[i] = other.arr[i];
@@ -33,7 +31,7 @@ template <typename T> struct CudaDynamicArray {
   }
 
   __host__ __device__ ~CudaDynamicArray() {
-    if (ownsArray) {
+    if (arr != nullptr) {
       delete[] arr;
     }
   }

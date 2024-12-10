@@ -93,7 +93,6 @@ struct RealMarkingAllocator {
 
       temp_tokens->arr = d_arr;
       
-      temp_tokens->ownsArray = h_marking->places[i]->tokens->ownsArray;
       temp_tokens->size = h_marking->places[i]->tokens->size;
       temp_tokens->capacity = h_marking->places[i]->tokens->capacity;
 
