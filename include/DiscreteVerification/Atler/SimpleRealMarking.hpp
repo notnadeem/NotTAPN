@@ -69,7 +69,7 @@ struct SimpleRealPlace {
     if (index >= tokens->size) {
       tokens->add(&newToken);
     } else {
-      tokens->insert2(index, &newToken);
+      tokens->insert(index, &newToken);
     }
   }
 

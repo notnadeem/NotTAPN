@@ -46,18 +46,18 @@ public:
   bool runCuda();
   bool parallel_run();
 
-  // Core functionality
-  // void prepare();
-  // bool executeRun(SMCRunGenerator *generator);
-  unsigned int maxUsedTokens();
-  void setMaxTokensIfGreater(unsigned int i);
-  bool mustDoAnotherRun();
-  bool handleSuccessor(Atler::SimpleRealMarking *marking);
-  float getEstimation();
-  void computeChernoffHoeffdingBound(const float intervalWidth, const float confidence);
-  bool reachedRunBound(Atler::AtlerRunResult *generator);
-  bool reachedRunBound2(Atler::AtlerRunResult2 *generator);
-  // void handleRunResult(const bool res, int steps, double delay);
+      // Core functionality
+      // void prepare();
+      // bool executeRun(SMCRunGenerator *generator);
+      unsigned int maxUsedTokens() ;
+      void setMaxTokensIfGreater(unsigned int i);
+      bool mustDoAnotherRun();
+      bool handleSuccessor(Atler::SimpleRealMarking *marking);
+      float getEstimation();
+      void computeChernoffHoeffdingBound(const float intervalWidth,
+                                         const float confidence);
+      bool reachedRunBound(Atler::AtlerRunResult *generator);
+      // void handleRunResult(const bool res, int steps, double delay);
 
   // Printing and output methods
   void printResult();

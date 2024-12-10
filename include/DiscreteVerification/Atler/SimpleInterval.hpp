@@ -98,7 +98,7 @@ inline void setAdd(SimpleDynamicArray<SimpleInterval> &first, const SimpleInterv
 
         if (element.upper() < first.get(i).lower()) {
             //Add element
-            first.insert2(i, element);
+            first.insert(i, element);
             return;
         } else if (overlap(element, first.get(i))) {
             SimpleInterval u = hull(element, first.get(i));

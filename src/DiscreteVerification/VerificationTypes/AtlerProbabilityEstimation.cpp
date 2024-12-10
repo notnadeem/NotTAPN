@@ -2,16 +2,18 @@
 #include "DiscreteVerification/Atler/AtlerRunResult.hpp"
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
-#include "DiscreteVerification/Atler/SimpleInterval.hpp"
-#include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
+// #include "DiscreteVerification/Atler/SimpleInterval.hpp"
+// #include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleQueryVisitor.hpp"
 #include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
-#include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
+// #include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
+#include <atomic>
 #include <iomanip>
+#include <thread>
 #include <vector>
 
 std::string printDoubleo(double value, unsigned int precision) {
@@ -42,131 +44,69 @@ bool AtlerProbabilityEstimation::run() {
 
   int count = 0;
   int success = 0;
-  // for runsNeeded timed
+
+  Atler::AtlerRunResult *original = new Atler::AtlerRunResult(&stapn, siMarking);
+
+  auto clones = new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
+
   for (int i = 0; i < runsNeeded; i++) {
-    Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(stapn, *siMarking);
-    while (!res->maximal && !(reachedRunBound2(res))) {
-      Atler::SimpleQueryVisitor checker(res->realMarking, stapn);
-      Atler::AST::BoolResult result;
-
-      simpleSMCQuery->accept(checker, result);
-
-      if (result.value) {
-        success++;
-        break;
-      }
-
-      res->next();
-    }
-
-    count++;
-    if (simpleSMCQuery->getQuantifier() == Atler::PG) {
-      std::cout << "Number of runs: " << count << std::endl;
-      std::cout << "Failed runs: " << success << std::endl;
-    }
-
-    delete res;
+    auto clone = new Atler::AtlerRunResult(*original);
+    clones->add(clone);
+    std::cout << "Clone " << i << " is prepared" << std::endl;
   }
 
-  // count++;
+  size_t threads_no = std::thread::hardware_concurrency();
+  std::cout << ". Using " << threads_no << " threads..." << std::endl;
 
-  // Simulate prepare func
-  // setup the run generator
+  std::atomic<int> atomic_success{0};
+  std::vector<std::thread> threads;
 
-  // auto runres = new Atler::AtlerRunResult(stapn, siMarking);
-  // runres->prepare();
+  int runs_per_thread = runsNeeded / threads_no;
+  int remaining_runs = runsNeeded % threads_no;
 
-  // auto clones =
-  //     new Atler::SimpleDynamicArray<Atler::AtlerRunResult *>(runsNeeded);
-  // for (int i = 0; i < 100; i++) {
-  //   auto clone = new Atler::AtlerRunResult(*runres);
-  //   clones->add(clone);
-  //   std::cout << "Clone " << i << " is prepared" << std::endl;
-  // }
+  auto thread_func = [&](int start, int end) {
+    for (int i = start; i < end; i++) {
+      Atler::AtlerRunResult *res = clones->get(i);
 
-  // int count = 0;
-  // int success = 0;
+      while (!res->maximal && !(reachedRunBound(res))) {
+        Atler::SimpleQueryVisitor checker(*res->realMarking, stapn);
+        Atler::AST::BoolResult result;
 
-  // for (int i = 0; i < 100; i++) {
-  //   auto runner = new Atler::AtlerRunResult(*runres);
-  //   // runner->prepare(&siMarking);
-  //   // Atler::AtlerRunResult *runner = clones->get(i);
-  //   // Atler::AtlerRunResult runner = Atler::AtlerRunResult(*runres);
+        simpleSMCQuery->accept(checker, result);
 
-  //   bool runRes = false;
-  //   while (!runner->maximal && !(reachedRunBound(runner))) {
-  //     // print value of maximal
-  //     Atler::SimpleQueryVisitor checker(*runner->parent, stapn);
-  //     Atler::AST::BoolResult result;
+        if (result.value) {
+          atomic_success++;
+          res->sucessful = true;
+          break;
+        }
 
-  //     simpleSMCQuery->accept(checker, result);
+        res->next();
+      }
 
-  //     runRes = result.value;
+      count++;
+      delete res;
+    }
+  };
 
-  //     if (runRes) {
-  //       success++;
-  //       break;
-  //     }
+  int start = 0;
+  for (size_t i = 0; i < threads_no; i++) {
+    int chunk = runs_per_thread + (i < remaining_runs ? 1 : 0);
+    threads.emplace_back(thread_func, start, start + chunk);
+    start += chunk;
+  }
 
-  //     bool done = runner->next();
+  for (auto &thread : threads) {
+    thread.join();
+  }
 
-  //     // print data from the new marking
-  //     // std::cout << "New marking:" << std::endl;
-  //     // for (size_t i = 0; i < runner->parent->placesLength; i++) {
-  //     //   std::cout << "Place " << i << ": ";
-  //     //   for (size_t j = 0; j < runner->parent->places[i]->tokens->size;
-  //     j++) {
-  //     //     auto token = runner->parent->places[i]->tokens->get(j);
-  //     //     std::cout << "(" << runner->parent->places[i]->place.name << ","
-  //     //               << token->age << ") ";
-  //     //   }
-  //     //   std::cout << std::endl;
-  //     // }
-  //   }
+  success = atomic_success.load();
 
-  //   count++;
-  //   if (simpleSMCQuery->getQuantifier() == Atler::PG) {
-  //     std::cout << "Number of runs: " << count << std::endl;
-  //     std::cout << "Failed runs: " << success << std::endl;
-  //   }
+  std::cout << "\nPF: Success rate / PG: Failure rate:\n" << success / (double)runsNeeded << std::endl;
 
-  //   delete runner;
-
-  //   // print data from the new marking
-  //   // std::cout << "New marking:" << std::endl;
-  //   // for (size_t i = 0; i < runner->parent->placesLength; i++) {
-  //   //   std::cout << "Place " << i << ": ";
-  //   //   for (size_t j = 0; j < runner->parent->places[i].tokens->size; j++)
-  //   {
-  //   //     auto token = runner->parent->places[i].tokens->get(j);
-  //   //     std::cout << "(" << runner->parent->places[i].place.name << ","
-  //   //               << token->age << ") ";
-  //   //   }
-  //   //   std::cout << std::endl;
-  //   // }
-
-  //   // delete runner;
-
-  //   // std::cout << "SIMarking:" << std::endl;
-  //   // for (size_t i = 0; i < siMarking.placesLength; i++) {
-  //   //   std::cout << "Place " << i << ": ";
-  //   //   for (size_t j = 0; j < siMarking.places[i].tokens->size; j++) {
-  //   //     auto token = siMarking.places[i].tokens->get(j);
-  //   //     std::cout << "(" << siMarking.places[i].place.name << ","
-  //   //               << token->age << ") ";
-  //   //   }
-  //   //   std::cout << std::endl;
-  //   // }
-  // }
-
-  return false;
+  return true;
 }
 
 bool AtlerProbabilityEstimation::reachedRunBound(Atler::AtlerRunResult *generator) {
-  return generator->totalTime >= smcSettings.timeBound || generator->totalSteps >= smcSettings.stepBound;
-};
-
-bool AtlerProbabilityEstimation::reachedRunBound2(Atler::AtlerRunResult2 *generator) {
   return generator->totalTime >= smcSettings.timeBound || generator->totalSteps >= smcSettings.stepBound;
 };
 
