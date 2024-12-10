@@ -39,6 +39,7 @@ struct CudaRunResult {
 
     // Initialize transition intervals
     transitionIntervals = new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *>(tapn->transitionsLength);
+    datesSampled = new CudaDynamicArray<double>();
   }
 
   __device__ CudaRunResult(const CudaRunResult &other, curandState *local_r_state)

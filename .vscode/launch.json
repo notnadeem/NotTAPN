@@ -36,8 +36,8 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/verifydtapn/bin/verifydtapn-linux64",
       "args": [
-        "${workspaceFolder}/example-nets/model.xml",
-        "${workspaceFolder}/example-workflows/query1.xml"
+        "${workspaceFolder}/example-nets/test-model.xml",
+        "${workspaceFolder}/example-workflows/test-query.xml"
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",

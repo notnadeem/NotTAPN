@@ -53,7 +53,6 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
     lQuery.accept(checker, result);
 
     if (result.value) {
-      printf("Run finished");
       atomicAdd(successCount, 1);
       break;
     }
@@ -351,7 +350,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   cudaMalloc(&stepBound, sizeof(int));
   cudaMemcpy(stepBound, &cudaSMCQuery->smcSettings.stepBound, sizeof(int), cudaMemcpyHostToDevice);
 
-  int rand_seed_val = 1234;
+  int rand_seed_val = 12345;
   int *rand_seed;
   cudaMalloc(&rand_seed, sizeof(int));
   cudaMemcpy(rand_seed, &rand_seed_val, sizeof(int), cudaMemcpyHostToDevice);
@@ -365,9 +364,9 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   // Allocate device memory for rngStates
   curandState *rngStates;
-  cudaMalloc(&rngStates, *runsNeeded * sizeof(curandState_t));
+  cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, 1>>>(
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, threadsPerBlock>>>(
       runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
 
   cudaDeviceSynchronize();
