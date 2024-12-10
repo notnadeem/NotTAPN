@@ -72,6 +72,9 @@ struct RunResultAllocator {
         allocate_dynamic_dobbel_array(h_run_result->transitionIntervals);
 
     temp_run_result->transitionIntervals = d_transitionIntervals;
+    temp_run_result->totalSteps = h_run_result->totalSteps;
+    temp_run_result->totalTime = h_run_result->totalTime;
+    temp_run_result->maximal = h_run_result->maximal;
 
     // Copy CudaRunResult from host to device
     cudaMemcpy(runResultDevice, temp_run_result, sizeof(CudaRunResult), cudaMemcpyHostToDevice);

@@ -2,9 +2,11 @@
 #define SMCQUERYALLOCATOR_CUH_
 
 #include "DiscreteVerification/Cuda/CudaSMCQuery.cuh"
+#include "DiscreteVerification/Cuda/CudaAST.cuh"
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::Alloc {
+using namespace VerifyTAPN::Cuda::AST;
 
 struct SMCQueryAllocator {
   __host__ static CudaSMCQuery* allocate(CudaSMCQuery *h_smcQuery) {
