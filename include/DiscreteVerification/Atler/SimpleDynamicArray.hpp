@@ -34,9 +34,22 @@ template <typename T> struct SimpleDynamicArray {
     }
   }
 
+  SimpleDynamicArray(SimpleDynamicArray<T> &&other) noexcept {
+    size = other.size;
+    capacity = other.capacity;
+    ownsArray = other.ownsArray;
+    arr = other.arr;
+    other.arr = nullptr;
+    other.size = 0;
+    other.capacity = 0;
+    other.ownsArray = false;
+  }
+
   ~SimpleDynamicArray() {
     if (ownsArray) {
-      delete[] arr;
+      if (arr != nullptr) {
+        delete[] arr;
+      }
     }
   }
 
