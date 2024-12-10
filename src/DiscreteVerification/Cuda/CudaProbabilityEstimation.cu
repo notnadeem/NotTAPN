@@ -301,7 +301,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
 
-  //testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
+  testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
   // Allocate the initial marking
 
   cudaError_t err = cudaGetLastError();
