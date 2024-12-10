@@ -57,23 +57,7 @@ template <typename T> struct SimpleDynamicArray {
     arr[size++] = value;
   }
 
-  // This function takes an index and adds the value at that index and moves all
-  // the values after it to the right
   void insert(size_t index, T value) {
-    if (index >= size) {
-      throw std::out_of_range("Index out of bounds: insert operation");
-    }
-    if (size >= capacity) {
-      resize();
-    }
-    for (size_t i = size - 1; i >= index; i--) {
-      arr[i + 1] = arr[i];
-    }
-    arr[index] = value;
-    size++;
-  }
-
-  void insert2(size_t index, T value) {
     if (index > size) { // Allow inserting at the end
       throw std::out_of_range("Index out of bounds: insert operation");
     }
@@ -88,7 +72,6 @@ template <typename T> struct SimpleDynamicArray {
     size++;
   }
 
-  // NOTE: This function is not efficient, it is only used for simplicity
   void remove(size_t index) {
     if (index >= size) {
       throw std::out_of_range("Index out of bounds: remove operation");
@@ -99,19 +82,6 @@ template <typename T> struct SimpleDynamicArray {
     size--;
   }
 
-  // NOTE: This might not be necessary for the implementation of the algorithm
-  void remove(size_t index, size_t count) {
-    if (index >= size) {
-      throw std::out_of_range("Index out of bounds: remove multiple operation");
-    }
-    for (size_t i = index; i < size - count; i++) {
-      arr[i] = arr[i + count];
-    }
-    size -= count;
-  }
-
-  // NOTE: if the array contains pointers, we need to delete them and set all
-  // the values to nullptr
   void clear() { size = 0; }
 
   void set(size_t index, T value) {

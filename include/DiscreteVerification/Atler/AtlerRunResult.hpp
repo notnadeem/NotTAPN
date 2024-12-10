@@ -258,7 +258,6 @@ struct AtlerRunResult {
     }
     return std::make_pair(winner, date_min);
   }
-  // choose weightedWinner
 
   SimpleTimedTransition *
   chooseWeightedWinner(const SimpleDynamicArray<size_t> winner_indexes) {
@@ -517,20 +516,8 @@ struct AtlerRunResult {
       SimpleTimedInputArc *input = transition->preset[i];
       SimpleRealPlace *place = placeList[input->inputPlace.index];
       SimpleDynamicArray<SimpleRealToken *> *tokenList = place->tokens;
-      switch (transition->_firingMode) {
-      case SimpleSMC::FiringMode::Random:
-        removeRandom(*tokenList, input->interval, input->weight);
-        break;
-      case SimpleSMC::FiringMode::Oldest:
-        removeOldest(*tokenList, input->interval, input->weight);
-        break;
-      case SimpleSMC::FiringMode::Youngest:
-        removeYoungest(*tokenList, input->interval, input->weight);
-        break;
-      default:
-        removeOldest(*tokenList, input->interval, input->weight);
-        break;
-      }
+
+      switcher(transition, tokenList, input->interval, input->weight);
     }
 
     auto toCreate =
@@ -548,25 +535,6 @@ struct AtlerRunResult {
       if (destInv < arcInterval.upperBound) {
         arcInterval.setUpperBound(destInv, false);
       }
-
-      // switch (transition->_firingMode) {
-      // case SimpleSMC::FiringMode::Random: {
-      //   consumed = removeRandom(*tokenList, arcInterval, transport->weight);
-      //   break;
-      // }
-      // case SimpleSMC::FiringMode::Oldest: {
-      //   consumed = removeOldest(*tokenList, arcInterval, transport->weight);
-      //   break;
-      // }
-      // case SimpleSMC::FiringMode::Youngest: {
-      //   consumed = removeYoungest(*tokenList, arcInterval,
-      //   transport->weight); break;
-      // }
-      // default: {
-      //   consumed = removeOldest(*tokenList, arcInterval, transport->weight);
-      //   break;
-      // }
-      // }
 
       for (size_t j = 0; j < consumed.size; j++) {
         auto con = consumed.get(j);
