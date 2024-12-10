@@ -2,17 +2,19 @@
 #include "DiscreteVerification/Atler/AtlerRunResult.hpp"
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Atler/SimpleDynamicArray.hpp"
-#include "DiscreteVerification/Atler/SimpleInterval.hpp"
-#include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
+// #include "DiscreteVerification/Atler/SimpleInterval.hpp"
+// #include "DiscreteVerification/Atler/SimpleOptionsConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleQueryVisitor.hpp"
 #include "DiscreteVerification/Atler/SimpleRealMarking.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQuery.hpp"
 #include "DiscreteVerification/Atler/SimpleSMCQueryConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTAPNConverter.hpp"
 #include "DiscreteVerification/Atler/SimpleTimedArcPetriNet.hpp"
-#include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
+// #include "DiscreteVerification/Atler/SimpleVerificationOptions.hpp"
 #include <iomanip>
+#include <thread>
 #include <vector>
+#include <atomic>
 
 std::string printDoubleo(double value, unsigned int precision) {
   std::ostringstream oss;
@@ -59,32 +61,60 @@ bool AtlerProbabilityEstimation::run() {
     std::cout << "Clone " << i << " is prepared" << std::endl;
   }
 
-  for (int i = 0; i < runsNeeded; i++) {
-    // Atler::AtlerRunResult2 *res = new Atler::AtlerRunResult2(*original);
-    Atler::AtlerRunResult2 *res = clones->get(i);
+  // Get number of threads
+  size_t threads_no = std::thread::hardware_concurrency();
+  std::cout << ". Using " << threads_no << " threads..." << std::endl;
 
-    while (!res->maximal && !(reachedRunBound2(res))) {
-      Atler::SimpleQueryVisitor checker(*res->realMarking, stapn);
-      Atler::AST::BoolResult result;
+  std::atomic<int> atomic_success{0};
+  std::vector<std::thread> threads;
 
-      simpleSMCQuery->accept(checker, result);
+  // Split work among threads
+  int runs_per_thread = runsNeeded / threads_no;
+  int remaining_runs = runsNeeded % threads_no;
 
-      if (result.value) {
-        success++;
-        break;
+  auto thread_func = [&](int start, int end) {
+    for (int i = start; i < end; i++) {
+      Atler::AtlerRunResult2 *res = clones->get(i);
+
+      while (!res->maximal && !(reachedRunBound2(res))) {
+        Atler::SimpleQueryVisitor checker(*res->realMarking, stapn);
+        Atler::AST::BoolResult result;
+
+        simpleSMCQuery->accept(checker, result);
+
+        if (result.value) {
+          atomic_success++;
+          res->sucessful = true;
+          break;
+        }
+
+        res->next();
       }
 
-      res->next();
-    }
+      count++;
+      if (simpleSMCQuery->getQuantifier() == Atler::PG) {
+        std::cout << "Number of runs: " << count << std::endl;
+        std::cout << "Failed runs: " << atomic_success << std::endl;
+      }
 
-    count++;
-    if (simpleSMCQuery->getQuantifier() == Atler::PG) {
-      std::cout << "Number of runs: " << count << std::endl;
-      std::cout << "Failed runs: " << success << std::endl;
+      delete res;
     }
+  };
 
-    delete res;
+  // Launch threads
+  int start = 0;
+  for (size_t i = 0; i < threads_no; i++) {
+    int chunk = runs_per_thread + (i < remaining_runs ? 1 : 0);
+    threads.emplace_back(thread_func, start, start + chunk);
+    start += chunk;
   }
+
+  // Wait for all threads to complete
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  success = atomic_success.load();
 
   // count++;
 

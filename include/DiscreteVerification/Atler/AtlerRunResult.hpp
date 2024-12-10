@@ -679,6 +679,8 @@ struct AtlerRunResult2 {
   uint numericPrecision = 0;
   std::ranlux48 rng;
 
+  bool sucessful = false;
+
   AtlerRunResult2(SimpleTimedArcPetriNet *stapn, SimpleRealMarking* srm,
                   const unsigned int numericPrecision = 0)
       : stapn(stapn), realMarking(new SimpleRealMarking(*srm)), numericPrecision(numericPrecision) {
