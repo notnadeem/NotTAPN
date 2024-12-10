@@ -27,12 +27,8 @@ struct SMCQueryAllocator {
     temp_query->smcSettings = h_smcQuery->smcSettings;
     temp_query->expr = d_expr;
 
-
     checkCudaError(cudaMemcpy(d_smcQuery, temp_query, sizeof(CudaSMCQuery), cudaMemcpyHostToDevice),
                   "Failed to copy CudaSMCQuery to device");
-
-    CudaSMCQuery *h_temp = (CudaSMCQuery *)malloc(sizeof(CudaSMCQuery)); // test
-    cudaMemcpy(h_temp, d_smcQuery, sizeof(CudaSMCQuery), cudaMemcpyDeviceToHost); // test
 
     free(temp_query);
 
@@ -62,6 +58,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
             checkCudaError(cudaMemcpy(d_not_expr, temp_not_expr, sizeof(Cuda::AST::NotExpression), cudaMemcpyHostToDevice),
                             "Failed to copy NotExpression to device");
 
+            free(temp_not_expr);
+
             temp_expr->notExpr = d_not_expr;
             break;
         }
@@ -72,6 +70,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
             Cuda::AST::DeadlockExpression *temp_deadlock_expr = (Cuda::AST::DeadlockExpression *)malloc(sizeof(Cuda::AST::DeadlockExpression));
             checkCudaError(cudaMemcpy(d_deadlock_expr, temp_deadlock_expr, sizeof(Cuda::AST::DeadlockExpression), cudaMemcpyHostToDevice),
                             "Failed to copy DeadlockExpression to device");
+
+            free(temp_deadlock_expr);
 
             temp_expr->deadlockExpr = d_deadlock_expr;
             break;
@@ -85,6 +85,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
 
             checkCudaError(cudaMemcpy(d_bool_expr, temp_bool_expr, sizeof(Cuda::AST::BoolExpression), cudaMemcpyHostToDevice),
                             "Failed to copy BoolExpression to device");
+
+            free(temp_bool_expr);
 
             temp_expr->boolExpr = d_bool_expr;
             break;
@@ -100,6 +102,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
 
             checkCudaError(cudaMemcpy(d_atomic_prop, temp_atomic_prop, sizeof(Cuda::AST::AtomicProposition), cudaMemcpyHostToDevice),
                             "Failed to copy AtomicProposition to device");
+
+            free(temp_atomic_prop);
 
             temp_expr->atomicProp = d_atomic_prop;
             break;
@@ -118,6 +122,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
             checkCudaError(cudaMemcpy(d_and_expr, temp_and_expr, sizeof(Cuda::AST::AndExpression), cudaMemcpyHostToDevice),
                             "Failed to copy AndExpression to device");
 
+            free(temp_and_expr);
+
             temp_expr->andExpr = d_and_expr;
             break;
         }
@@ -135,6 +141,8 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
             checkCudaError(cudaMemcpy(d_or_expr, temp_or_expr, sizeof(Cuda::AST::OrExpression), cudaMemcpyHostToDevice),
                             "Failed to copy OrExpression to device");
 
+            free(temp_or_expr);
+
             temp_expr->orExpr = d_or_expr;
             break;
         }
@@ -146,12 +154,7 @@ __host__ static CudaExpression* allocateExpression(CudaExpression *h_expr) {
     checkCudaError(cudaMemcpy(d_expr, temp_expr, sizeof(CudaExpression), cudaMemcpyHostToDevice),
                   "Failed to copy CudaExpression to device");
 
-    CudaExpression *h_temp = (CudaExpression *)malloc(sizeof(CudaExpression)); // test
-    cudaMemcpy(h_temp, d_expr, sizeof(CudaExpression), cudaMemcpyDeviceToHost); // test
-
     free(temp_expr);
-
-    cudaMemcpy(h_temp, d_expr, sizeof(CudaExpression), cudaMemcpyDeviceToHost); // test
 
     return d_expr;
 }
@@ -180,6 +183,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
             checkCudaError(cudaMemcpy(d_plus_expr, temp_plus_expr, sizeof(Cuda::AST::PlusExpression), cudaMemcpyHostToDevice),
                             "Failed to copy PlusExpression to device");
 
+            free(temp_plus_expr);
+
             temp_expr->plusExpr = d_plus_expr;
             break;
         }
@@ -194,6 +199,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
             checkCudaError(cudaMemcpy(d_subtract_expr, temp_subtract_expr, sizeof(Cuda::AST::SubtractExpression), cudaMemcpyHostToDevice),
                             "Failed to copy SubtractExpression to device");
 
+            free(temp_subtract_expr);
+
             temp_expr->subtractExpr = d_subtract_expr;
             break;
         }
@@ -206,6 +213,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
 
             checkCudaError(cudaMemcpy(d_minus_expr, temp_minus_expr, sizeof(Cuda::AST::MinusExpression), cudaMemcpyHostToDevice),
                             "Failed to copy MinusExpression to device");
+
+            free(temp_minus_expr);
 
             temp_expr->minusExpr = d_minus_expr;
             break;
@@ -221,6 +230,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
             checkCudaError(cudaMemcpy(d_multiply_expr, temp_multiply_expr, sizeof(Cuda::AST::MultiplyExpression), cudaMemcpyHostToDevice),
                             "Failed to copy MultiplyExpression to device");
 
+            free(temp_multiply_expr);
+
             temp_expr->multiplyExpr = d_multiply_expr;
             break;
         }
@@ -233,6 +244,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
 
             checkCudaError(cudaMemcpy(d_number_expr, temp_number_expr, sizeof(Cuda::AST::NumberExpression), cudaMemcpyHostToDevice),
                             "Failed to copy NumberExpression to device");
+
+            free(temp_number_expr);
 
             temp_expr->numberExpr = d_number_expr;
             break;
@@ -247,6 +260,8 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
             checkCudaError(cudaMemcpy(d_identifier_expr, temp_identifier_expr, sizeof(Cuda::AST::IdentifierExpression), cudaMemcpyHostToDevice),
                             "Failed to copy IdentifierExpression to device");
 
+            free(temp_identifier_expr);
+
             temp_expr->identifierExpr = d_identifier_expr;
             break;
         }
@@ -258,12 +273,7 @@ __host__ static Cuda::AST::ArithmeticExpression* allocateArithmeticExpression(Cu
     checkCudaError(cudaMemcpy(d_expr, temp_expr, sizeof(Cuda::AST::ArithmeticExpression), cudaMemcpyHostToDevice),
                   "Failed to copy ArithmeticExpression to device");
 
-    Cuda::AST::ArithmeticExpression *h_temp = (Cuda::AST::ArithmeticExpression *)malloc(sizeof(Cuda::AST::ArithmeticExpression)); // test
-    cudaMemcpy(h_temp, d_expr, sizeof(Cuda::AST::ArithmeticExpression), cudaMemcpyDeviceToHost); // test
-
     free(temp_expr);
-
-    cudaMemcpy(h_temp, d_expr, sizeof(Cuda::AST::ArithmeticExpression), cudaMemcpyDeviceToHost); // test
 
     return d_expr;
 }
