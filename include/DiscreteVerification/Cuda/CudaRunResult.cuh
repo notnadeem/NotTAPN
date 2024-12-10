@@ -43,6 +43,23 @@ struct CudaRunResult {
     transitionIntervals = new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *>(tapn->transitionsLength);
   }
 
+  __device__ CudaRunResult(const CudaRunResult &other, curandState *local_r_state)
+      : numericPrecision(other.numericPrecision) {
+    // set base properties
+    tapn = new CudaTimedArcPetriNet(*other.tapn);
+    numericPrecision = other.numericPrecision;
+
+    transitionIntervals =
+        new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *>(other.transitionIntervals->size);
+    for (size_t i = 0; i < other.transitionIntervals->size; i++) {
+      transitionIntervals->add(new CudaDynamicArray<Util::CudaInterval>(*other.transitionIntervals->get(i)));
+    }
+    realMarking = new CudaRealMarking(*other.realMarking);
+
+    // run reset
+    reset(local_r_state);
+  }
+
   __host__ __device__ ~CudaRunResult() {
     for (size_t i = 0; i < transitionIntervals->size; i++) {
       delete transitionIntervals->get(i);

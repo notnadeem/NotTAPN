@@ -36,28 +36,33 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
 
   // Cuda::CudaTimedArcPetriNet tapn = *ctapn;
 
-  // TODO prepare per thread
-  runner->prepare(&local_r_state);
-
   CudaSMCQuery lQuery = *query;
+  CudaRunResult lRunner = CudaRunResult(*runner);
+
+  // TODO prepare per thread
+  lRunner.prepare(&local_r_state);
+
 
   int lTimeBound = *timeBound;
   int lStepBound = *stepBound;
 
-  while (!runner->maximal && !(runner->totalTime >= lTimeBound || runner->totalSteps >= lStepBound)) {
-    Cuda::CudaRealMarking *child = runner->realMarking;
-    Cuda::CudaQueryVisitor checker(*child, *runner->tapn);
+  while (!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound)) {
+    Cuda::CudaRealMarking *child = new CudaRealMarking(*lRunner.realMarking);
+    Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
     Cuda::AST::BoolResult result;
 
     lQuery.accept(checker, result);
 
     if (result.value) {
+      printf("Run finished");
       atomicAdd(successCount, 1);
       break;
     }
 
-    runner->next(&local_r_state);
+    lRunner.next(&local_r_state);
   }
+
+
 }
 
 __global__ void testAllocationKernel(CudaRunResult *runner, CudaRealMarking *marking, u_int *runNeed) {
@@ -361,7 +366,7 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   // testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
 
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<100, threadsPerBlock>>>(
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, 1>>>(
       runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, runner->rngStates, rand_seed, timeBound, stepBound);
 
   cudaDeviceSynchronize();

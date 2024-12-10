@@ -111,7 +111,7 @@ struct CudaRealMarking {
 
   __host__ __device__ CudaRealMarking() {}
 
-  CudaRealMarking(const CudaRealMarking &other) {
+  __device__ CudaRealMarking(const CudaRealMarking &other) {
     placesLength = other.placesLength;
     deadlocked = other.deadlocked;
     places = new CudaRealPlace *[other.placesLength];
@@ -120,7 +120,7 @@ struct CudaRealMarking {
     }
   }
 
-  ~CudaRealMarking() {
+  __device__ ~CudaRealMarking() {
     for (size_t i = 0; i < placesLength; i++) {
       delete places[i];
     }
@@ -155,8 +155,7 @@ struct CudaRealMarking {
   __host__ __device__ double availableDelay() const {
     double available = HUGE_VAL;
     for (size_t i = 0; i < placesLength; i++) {
-      if (places[i]->isEmpty())
-        continue;
+      if (places[i]->isEmpty()) continue;
       double delay = places[i]->availableDelay();
       if (delay < available) {
         available = delay;
