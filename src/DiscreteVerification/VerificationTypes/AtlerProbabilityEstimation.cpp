@@ -82,7 +82,6 @@ bool AtlerProbabilityEstimation::run() {
         simpleSMCQuery->accept(checker, result);
 
         if (result.value) {
-          atomic_success++;
           res->sucessful = true;
           break;
         }
@@ -91,7 +90,6 @@ bool AtlerProbabilityEstimation::run() {
       }
 
       count++;
-      delete res;
     }
   };
 
@@ -106,7 +104,18 @@ bool AtlerProbabilityEstimation::run() {
     thread.join();
   }
 
-  success = atomic_success.load();
+  for (int i = 0; i < runsNeeded; i++) {
+      Atler::AtlerRunResult *res = clones->get(i);
+      if (res->sucessful) {
+          success++;
+      }
+  }
+
+  for (int i = 0; i < runsNeeded; i++) {
+      Atler::AtlerRunResult *res = clones->get(i);
+      delete res;
+  }
+  delete clones;
 
   std::cout << "\nPF: Success rate / PG: Failure rate:\n"
             << success / (double)runsNeeded << std::endl;
