@@ -189,7 +189,6 @@ struct NumberExpression {
 
 // IdentifierExpression
 struct IdentifierExpression {
-    ArithmeticExpression base;
     int place;
 
     __host__ __device__ IdentifierExpression(int place = 0);

@@ -76,7 +76,7 @@ __host__ __device__ void CudaQueryVisitor::visit(AST::NotExpression &expr, AST::
 __host__ __device__ void CudaQueryVisitor::visit(AST::OrExpression &expr, AST::Result &context) {
     AST::BoolResult left, right;
     expr.left->accept(*this, left);
-    // use lazy evaluation
+
     if (left.value) {
         static_cast<AST::BoolResult &>(context).value = true;
     } else {
@@ -89,7 +89,6 @@ __host__ __device__ void CudaQueryVisitor::visit(AST::AndExpression &expr, AST::
     AST::BoolResult left, right;
     expr.left->accept(*this, left);
 
-    // use lazy evaluation
     if (!left.value) {
         static_cast<AST::BoolResult &>(context).value = false;
     } else {

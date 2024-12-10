@@ -110,8 +110,6 @@ CudaSMCQueryConverter::convertSMCSettings(const VerifyTAPN::AST::SMCSettings &se
 }
 
 inline VerifyTAPN::Cuda::AST::CudaSMCQuery *CudaSMCQueryConverter::convert(VerifyTAPN::AST::SMCQuery *query) {
-  VerifyTAPN::Cuda::AST::CudaExpression* testExpr = convert(&query->getConstChild());
-  
   VerifyTAPN::Cuda::AST::CudaSMCQuery* result = new VerifyTAPN::Cuda::AST::CudaSMCQuery(convertQuantifier(query->getQuantifier()),
                                                  convertSMCSettings(query->getSmcSettings()),
                                                  convert(&query->getConstChild()));
