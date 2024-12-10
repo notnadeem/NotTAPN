@@ -18,15 +18,15 @@ class AtlerProbabilityEstimation {
 protected:
   TAPN::TimedArcPetriNet &tapn;
   RealMarking &initialMarking;
-  AST::Query *query;
+  VerifyTAPN::AST::Query *query;
   VerificationOptions options;
   std::vector<int> placeStats{};
 
 public:
-  AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking, AST::SMCQuery *query,
+  AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking, VerifyTAPN::AST::SMCQuery *query,
                              VerificationOptions options);
 
-  AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking, AST::SMCQuery *query,
+  AtlerProbabilityEstimation(TAPN::TimedArcPetriNet &tapn, RealMarking &initialMarking, VerifyTAPN::AST::SMCQuery *query,
                              VerificationOptions options, unsigned int runs)
       : tapn(tapn), initialMarking(initialMarking), query(query), options(options), numberOfRuns(0), maxTokensSeen(0),
         smcSettings(query->getSmcSettings()), validRuns(0), runsNeeded(runs) {}
