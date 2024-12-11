@@ -118,9 +118,8 @@ struct RunResultAllocator {
       temp_outer_arr[i] = d_inner_struct;
     }
 
-    cudaError_t err =
-        cudaMemcpy(d_outer_arr, temp_outer_arr, sizeof(CudaDynamicArray<CudaInterval> *) * h_transitionIntervals->size,
-                   cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(d_outer_arr, temp_outer_arr,
+                  sizeof(CudaDynamicArray<CudaInterval> *) * h_transitionIntervals->size ? h_transitionIntervals->size : 1, cudaMemcpyHostToDevice);
     if (err != cudaSuccess) {
       fprintf(stderr, "cudaMemcpy failed: %s\n", cudaGetErrorString(err));
       exit(EXIT_FAILURE);
