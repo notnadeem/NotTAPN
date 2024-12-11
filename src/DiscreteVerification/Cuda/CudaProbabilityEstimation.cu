@@ -35,19 +35,17 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
   }
 
   // Cuda::CudaTimedArcPetriNet tapn = *ctapn;
-
   CudaSMCQuery lQuery = *query;
-  CudaRunResult *lRunner = new CudaRunResult(*runner, &local_r_state);
+  CudaRunResult lRunner = CudaRunResult(*runner, &local_r_state);
 
-  // TODO prepare per thread
-  lRunner->prepare(&local_r_state);
+  lRunner.reset(&local_r_state);
 
   int lTimeBound = *timeBound;
   int lStepBound = *stepBound;
 
-  while (!lRunner->maximal && !(lRunner->totalTime >= lTimeBound || lRunner->totalSteps >= lStepBound)) {
-    Cuda::CudaRealMarking *child = lRunner->realMarking;
-    Cuda::CudaQueryVisitor checker(*child, *lRunner->tapn);
+  while (!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound)) {
+    Cuda::CudaRealMarking *child = lRunner.realMarking;
+    Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
     Cuda::AST::BoolResult result;
 
     lQuery.accept(checker, result);
@@ -57,7 +55,7 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
       break;
     }
 
-    lRunner->next(&local_r_state);
+    lRunner.next(&local_r_state);
   }
 }
 
@@ -298,9 +296,6 @@ bool AtlerProbabilityEstimation::runCuda() {
   SMCQuery *currentSMCQuery = static_cast<SMCQuery *>(query);
   VerifyTAPN::Cuda::AST::CudaSMCQuery *cudaSMCQuery = VerifyTAPN::Cuda::CudaSMCQueryConverter::convert(currentSMCQuery);
 
-  // std::cout << "Converting Options..." << std::endl;
-  // VerifyTAPN::Cuda::CudaVerificationOptions cudaOptions = Cuda::CudaOptionsConverter::convert(options);
-
   // TODO: Convert the PlaceVisitor to a simple representation
   // NOTE: Also find a way to simplify the representation of the PlaceVisitor
 
@@ -317,14 +312,12 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   CudaTimedArcPetriNet *cptapn = &ctapn;
 
-  auto runres = CudaRunResult(cptapn, cipMarking);
-
   auto runner = new CudaRunResult(cptapn, cipMarking);
 
+  //runner->prepare();
+
   // Allocate the run result
-
   RunResultAllocator allocator;
-
   auto allocResult = allocator.allocate(runner, cipMarking, blocks, threadsPerBlock);
 
   // Allocate the query
@@ -350,7 +343,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   cudaMalloc(&stepBound, sizeof(int));
   cudaMemcpy(stepBound, &cudaSMCQuery->smcSettings.stepBound, sizeof(int), cudaMemcpyHostToDevice);
 
-  int rand_seed_val = 12345;
+  int rand_seed_val = 98979;
   int *rand_seed;
   cudaMalloc(&rand_seed, sizeof(int));
   cudaMemcpy(rand_seed, &rand_seed_val, sizeof(int), cudaMemcpyHostToDevice);
@@ -358,18 +351,16 @@ bool AtlerProbabilityEstimation::runCuda() {
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
 
-  cudaDeviceSetLimit(cudaLimitStackSize, 256 * 1024);
-
-  // testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
+  cudaDeviceSetLimit(cudaLimitStackSize, 64 * 1024);
 
   // Allocate device memory for rngStates
   curandState *rngStates;
   cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, threadsPerBlock>>>(
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<32, 32>>>(
       runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
 
-  cudaDeviceSynchronize();
+  //cudaDeviceSynchronize();
 
   int successCountHost;
   cudaMemcpy(&successCountHost, successCount, sizeof(int), cudaMemcpyDeviceToHost);
@@ -381,22 +372,15 @@ bool AtlerProbabilityEstimation::runCuda() {
     return false;
   }
 
-  // testCudaSMCQueryAllocationKernel<<<1, 1>>>(d_cudaSMCQuery);
-
-  err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
-    return false;
-  }
-
-  // cudaError_t allocStatus = cudaGetLastError();
-  // if (allocStatus != cudaSuccess) {
-  //   std::cerr << "cudaMalloc failed: " << cudaGetErrorString(allocStatus) << std::endl;
-  // } else {
-  //   std::cout << "Device memory for curand allocated successfully." << std::endl;
-  // }
-
   std::cout << "Kernel execution completed successfully." << std::endl;
+
+  cudaFree(successCount);
+  cudaFree(runsNeeded);
+  cudaFree(timeBound);
+  cudaFree(stepBound);
+  cudaFree(rand_seed);
+  cudaFree(rngStates);
+  delete runner;
 
   return false;
 }

@@ -45,7 +45,7 @@ struct CudaRunResult {
   __device__ CudaRunResult(const CudaRunResult &other, curandState *local_r_state)
       : numericPrecision(other.numericPrecision) {
     // set base properties
-    tapn = new CudaTimedArcPetriNet(*other.tapn);
+    tapn = other.tapn;
     numericPrecision = other.numericPrecision;
 
     transitionIntervals =
@@ -60,15 +60,18 @@ struct CudaRunResult {
   }
 
   __host__ __device__ ~CudaRunResult() {
+    printf("destructor CudaResult\n");
     for (size_t i = 0; i < transitionIntervals->size; i++) {
       delete transitionIntervals->get(i);
     }
     delete transitionIntervals;
     delete datesSampled;
+    //delete realMarking;
+    //if (tapn != nullptr) delete tapn;
   }
 
   // private: (fix this later)
-  __device__ void prepare(curandState *local_r_state) {
+  __host__ __device__ void prepare() {
     double originMaxDelay = realMarking->availableDelay();
 
     auto invIntervals = CudaDynamicArray<Util::CudaInterval>(10);
@@ -86,8 +89,6 @@ struct CudaRunResult {
         transitionIntervals->add(new CudaDynamicArray<Util::CudaInterval>(intersection));
       }
     }
-
-    reset(local_r_state);
   }
 
   __device__ void reset(curandState *local_r_state) {
@@ -266,7 +267,7 @@ struct CudaRunResult {
     return tapn->transitions[winner_indexes.get(0)];
   }
 
-  __device__ CudaDynamicArray<Util::CudaInterval> transitionFiringDates(const CudaTimedTransition &transition) {
+  __host__ __device__ CudaDynamicArray<Util::CudaInterval> transitionFiringDates(const CudaTimedTransition &transition) {
     printf("transition: %s\n", transition.name);
     printf("transition.presetLength: %d\n", transition.presetLength);
     auto initialFiringIntervals = CudaDynamicArray<Util::CudaInterval>(10);
@@ -275,9 +276,7 @@ struct CudaRunResult {
 
     auto firingIntervalsStack = CudaDeque<CudaDynamicArray<Util::CudaInterval>>();
     firingIntervalsStack.push_front(initialFiringIntervals);
-
     auto disabled = CudaDynamicArray<Util::CudaInterval>();
-
     // for each inhibitor arc
     for (size_t i = 0; i < transition.inhibitorArcsLength; i++) {
       auto inhib = transition.inhibitorArcs[i];
@@ -329,7 +328,7 @@ struct CudaRunResult {
     return CudaDynamicArray<Util::CudaInterval>(firingIntervalsStack.front->data);
   }
 
-  __device__ CudaDynamicArray<Util::CudaInterval>
+  __host__ __device__ CudaDynamicArray<Util::CudaInterval>
   arcFiringDates(CudaTimeInterval *time_interval, const uint32_t *weight, CudaDynamicArray<CudaRealToken *> *tokens) {
     Util::CudaInterval arcInterval(time_interval->lowerBound, time_interval->upperBound);
 
