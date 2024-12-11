@@ -48,8 +48,7 @@ struct CudaRunResult {
     tapn = new CudaTimedArcPetriNet(*other.tapn);
     numericPrecision = other.numericPrecision;
 
-    transitionIntervals =
-        new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *>(other.transitionIntervals->size);
+    transitionIntervals = new CudaDynamicArray<CudaDynamicArray<Util::CudaInterval> *>(other.transitionIntervals->size);
     for (size_t i = 0; i < other.transitionIntervals->size; i++) {
       transitionIntervals->add(new CudaDynamicArray<Util::CudaInterval>(*other.transitionIntervals->get(i)));
     }
@@ -82,7 +81,6 @@ struct CudaRunResult {
         CudaDynamicArray<Util::CudaInterval> firingDates = transitionFiringDates(*transition);
 
         auto intersection = Util::setIntersection(firingDates, invIntervals);
-
         transitionIntervals->add(new CudaDynamicArray<Util::CudaInterval>(intersection));
       }
     }
