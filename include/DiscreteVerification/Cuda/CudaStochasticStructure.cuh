@@ -104,8 +104,8 @@ struct Distribution {
       double d = shape - 1.0 / 3.0;
       double c = 1.0 / sqrt(9.0 * d);
       while (true) {
-        double z = curand_normal(state);
-        double u = curand_uniform(state);
+        double z = curand_normal_double(state);
+        double u = curand_uniform_double(state);
         double v = pow(1.0 + c * z, 3.0);
         if (z > -1.0 / c && log(u) < (z * z / 2.0 + d - d * v + d * log(v))) {
           return d * v * scale;
@@ -113,7 +113,7 @@ struct Distribution {
       }
     } else {
       double r = gamrnd_d(shape + 1.0, scale, state);
-      double u = curand_uniform(state);
+      double u = curand_uniform_double(state);
       return r * pow(u, 1.0 / shape);
     }
   }
