@@ -265,8 +265,8 @@ struct CudaRunResult {
   }
 
   __device__ CudaDynamicArray<Util::CudaInterval> transitionFiringDates(const CudaTimedTransition &transition) {
-    printf("transition: %s\n", transition.name);
-    printf("transition.presetLength: %d\n", transition.presetLength);
+    // printf("transition: %s\n", transition.name);
+    // printf("transition.presetLength: %d\n", transition.presetLength);
     auto initialFiringIntervals = CudaDynamicArray<Util::CudaInterval>(10);
 
     initialFiringIntervals.add(Util::CudaInterval(0, HUGE_VAL));
@@ -286,7 +286,7 @@ struct CudaRunResult {
 
     for (size_t i = 0; i < transition.presetLength; i++) {
       auto arc = transition.preset[i];
-      printf("arc->inputPlace->index: %s\n", arc->inputPlace->name);
+      // printf("arc->inputPlace->index: %s\n", arc->inputPlace->name);
       CudaRealPlace *place = realMarking->places[arc->inputPlace->index];
       if (place->isEmpty()) {
         return CudaDynamicArray(disabled);

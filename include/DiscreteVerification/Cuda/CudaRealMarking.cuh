@@ -49,8 +49,6 @@ struct CudaRealPlace {
 
   __host__ __device__ inline void deltaAge(double x) {
     // print all the places
-    printf("place name: %s\n", place->name);
-    printf("deltaAge: %f\n", x);
     for (size_t i = 0; i < tokens->size; i++) {
       tokens->get(i)->deltaAge(x);
     }

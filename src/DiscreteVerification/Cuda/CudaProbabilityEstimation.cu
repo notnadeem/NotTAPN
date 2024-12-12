@@ -23,40 +23,77 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
                                     int *stepBound) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
-  if (tid >= 1024) return;
+  if (tid >= *runsNeeded) return;
 
   curand_init(*rand_seed, tid, 0, &states[tid]);
 
   // Copy global state to local memory for faster access
-  curandState local_r_state = states[tid];
-
+  curandState localState = states[tid];
   if (tid % 1000 == 0) {
     printf("Thread %d initialized\n", tid);
   }
 
   CudaSMCQuery lQuery = *query;
-  CudaRunResult *lRunner = new CudaRunResult(*runner, &local_r_state);
+  CudaRunResult *lRunner = new CudaRunResult(*runner, &localState);
 
   // TODO prepare per thread
-  lRunner->prepare(&local_r_state);
+  lRunner->prepare(&localState);
 
   int lTimeBound = *timeBound;
   int lStepBound = *stepBound;
 
-  // while (!lRunner->maximal && !(lRunner->totalTime >= lTimeBound || lRunner->totalSteps >= lStepBound)) {
-  //   Cuda::CudaRealMarking *child = lRunner->realMarking;
-  //   Cuda::CudaQueryVisitor checker(*child, *lRunner->tapn);
-  //   Cuda::AST::BoolResult result;
+  while (!lRunner->maximal && !(lRunner->totalTime >= lTimeBound || lRunner->totalSteps >= lStepBound)) {
+    Cuda::CudaRealMarking *child = lRunner->realMarking;
+    Cuda::CudaQueryVisitor checker(*child, *lRunner->tapn);
+    Cuda::AST::BoolResult result;
 
-  //   lQuery.accept(checker, result);
+    lQuery.accept(checker, result);
 
-  //   if (result.value) {
-  //     atomicAdd(successCount, 1);
-  //     break;
-  //   }
+    if (result.value) {
+      atomicAdd(successCount, 1);
+      break;
+    }
 
-  //   lRunner->next(&local_r_state);
-  // }
+    lRunner->next(&localState);
+  }
+}
+
+bool setDeviceHeapSize(double fraction = 1) {
+  size_t free_mem, total_mem;
+  cudaError_t status = cudaMemGetInfo(&free_mem, &total_mem);
+  if (status != cudaSuccess) {
+    std::cerr << "Error retrieving CUDA memory info: " << cudaGetErrorString(status) << std::endl;
+    return false;
+  }
+
+  size_t desired_heap_size = static_cast<size_t>(free_mem * fraction);
+
+  size_t min_heap_size = 10 * 1024 * 1024;          // 10 MB
+  size_t max_heap_size = 15ULL * 1024 * 1024 * 1024; // 15 GB
+  if (desired_heap_size < min_heap_size) {
+    desired_heap_size = min_heap_size;
+  } else if (desired_heap_size > max_heap_size) {
+    desired_heap_size = max_heap_size;
+  }
+
+  status = cudaDeviceSetLimit(cudaLimitMallocHeapSize, desired_heap_size);
+  if (status != cudaSuccess) {
+    std::cerr << "Error setting CUDA device heap size: " << cudaGetErrorString(status) << std::endl;
+    return false;
+  }
+
+  std::cout << "Device heap size set to: " << desired_heap_size / (1024 * 1024) << " MB\n";
+  return true;
+}
+
+bool setDeviceStackSize(size_t stackSizeBytes) {
+  cudaError_t status = cudaDeviceSetLimit(cudaLimitStackSize, stackSizeBytes);
+  if (status != cudaSuccess) {
+    std::cerr << "Error setting device stack size: " << cudaGetErrorString(status) << std::endl;
+    return false;
+  }
+  std::cout << "Device stack size set to: " << stackSizeBytes / 1024 << " KB" << std::endl;
+  return true;
 }
 
 bool AtlerProbabilityEstimation::runCuda() {
@@ -92,7 +129,16 @@ bool AtlerProbabilityEstimation::runCuda() {
 
   auto runner = new CudaRunResult(cptapn, cipMarking);
 
-  // Allocate the run result
+  size_t stackSize = 8 * 1024; // 8 KB
+  if (!setDeviceStackSize(stackSize)) {
+    std::cerr << "Failed to set device stack size.\n";
+    return -1;
+  }
+
+  if (!setDeviceHeapSize(1)) {
+    std::cerr << "Failed to set device heap size.\n";
+    return -1;
+  }
 
   RunResultAllocator allocator;
 
@@ -129,20 +175,18 @@ bool AtlerProbabilityEstimation::runCuda() {
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
 
-  cudaDeviceSetLimit(cudaLimitStackSize, 6 * 1024);
-
   // testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
 
   // Allocate device memory for rngStates
   curandState *rngStates;
   cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<4, threadsPerBlock>>>(
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threadsPerBlock>>>(
       runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
 
   cudaDeviceSynchronize();
 
-  int successCountHost;
+  int *successCountHost = (int *)malloc(sizeof(int));
   cudaMemcpy(&successCountHost, successCount, sizeof(int), cudaMemcpyDeviceToHost);
   printf("Success count: %d\n", successCountHost);
 
