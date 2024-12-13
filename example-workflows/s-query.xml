@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<property-set xmlns="http://tapaal.net/">
+  
+  <property>
+    <id>Query Comment/Name Here</id>
+    <description>Query Comment/Name Here</description>
+    <smc confidence="0.99999" interval-width="0.001" time-bound="1000"/>
+    <formula>
+      <finally>
+        <deadlock/>
+      </finally>
+    </formula>
+  </property>
+</property-set>

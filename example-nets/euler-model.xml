@@ -1,0 +1,15 @@
+<pnml>
+<net id="ComposedModel" type="P/T net">
+<place id="Euler_accumulated_time" name="Euler_accumulated_time" invariant="&lt; inf" initialMarking="1" >
+<graphics><position x="240" y="150" /></graphics></place>
+<place id="Euler_finished" name="Euler_finished" invariant="&lt; inf" initialMarking="0" >
+<graphics><position x="555" y="150" /></graphics></place>
+<transition player="0" id="Euler_delay" name="Euler_delay" weight="1.0" firingMode="Oldest" distribution="uniform" a="0.0" b="1.0" urgent="false">
+<graphics><position x="240" y="300" /></graphics></transition>
+<transition player="0" id="Euler_timeout" name="Euler_timeout" weight="1.0" firingMode="Oldest" distribution="constant" value="0.0" urgent="false">
+<graphics><position x="390" y="150" /></graphics></transition>
+<inputArc inscription="[1,inf)" source="Euler_accumulated_time" target="Euler_timeout" />
+<outputArc inscription="1" source="Euler_timeout" target="Euler_finished" />
+<transportArc inscription="[0,inf)" source="Euler_accumulated_time" transition="Euler_delay" target="Euler_accumulated_time" />
+</net>
+</pnml>

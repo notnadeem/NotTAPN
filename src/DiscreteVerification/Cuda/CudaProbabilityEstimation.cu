@@ -19,32 +19,33 @@ using namespace VerifyTAPN::Alloc;
 // warp utilization
 
 __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::CudaSMCQuery *query, int *successCount,
-                                    int *runsNeeded, curandState *states, int *rand_seed, int *timeBound,
+                                    int *runsNeeded, curandState *states, unsigned long long *rand_seed, int *timeBound,
                                     int *stepBound) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
-  if (tid >= *runsNeeded) return;
+  if (tid >= runNeed) return;
 
   curand_init(*rand_seed, tid, 0, &states[tid]);
 
   // Copy global state to local memory for faster access
   curandState localState = states[tid];
+  
   if (tid % 1000 == 0) {
     printf("Thread %d initialized\n", tid);
   }
 
   CudaSMCQuery lQuery = *query;
-  CudaRunResult *lRunner = new CudaRunResult(*runner, &localState);
+  CudaRunResult lRunner(*runner, &localState);
 
   // TODO prepare per thread
-  lRunner->prepare(&localState);
+  lRunner.prepare(&localState);
 
   int lTimeBound = *timeBound;
   int lStepBound = *stepBound;
-
-  while (!lRunner->maximal && !(lRunner->totalTime >= lTimeBound || lRunner->totalSteps >= lStepBound)) {
-    Cuda::CudaRealMarking *child = lRunner->realMarking;
-    Cuda::CudaQueryVisitor checker(*child, *lRunner->tapn);
+  
+  while (!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound)) {
+    Cuda::CudaRealMarking *child = lRunner.realMarking;
+    Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
     Cuda::AST::BoolResult result;
 
     lQuery.accept(checker, result);
@@ -54,7 +55,7 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
       break;
     }
 
-    lRunner->next(&localState);
+    lRunner.next(&localState);
   }
 }
 
@@ -68,8 +69,8 @@ bool setDeviceHeapSize(double fraction = 1) {
 
   size_t desired_heap_size = static_cast<size_t>(free_mem * fraction);
 
-  size_t min_heap_size = 10 * 1024 * 1024;          // 10 MB
-  size_t max_heap_size = 15ULL * 1024 * 1024 * 1024; // 15 GB
+  size_t min_heap_size = 10 * 1024 * 1024;         
+  size_t max_heap_size = 15ULL * 1024 * 1024 * 1024; 
   if (desired_heap_size < min_heap_size) {
     desired_heap_size = min_heap_size;
   } else if (desired_heap_size > max_heap_size) {
@@ -167,10 +168,10 @@ bool AtlerProbabilityEstimation::runCuda() {
   cudaMalloc(&stepBound, sizeof(int));
   cudaMemcpy(stepBound, &cudaSMCQuery->smcSettings.stepBound, sizeof(int), cudaMemcpyHostToDevice);
 
-  int rand_seed_val = 12345;
-  int *rand_seed;
-  cudaMalloc(&rand_seed, sizeof(int));
-  cudaMemcpy(rand_seed, &rand_seed_val, sizeof(int), cudaMemcpyHostToDevice);
+  unsigned long long rand_seed_val = 9223372036854775807;
+  unsigned long long *rand_seed;
+  cudaMalloc(&rand_seed, sizeof(unsigned long long));
+  cudaMemcpy(rand_seed, &rand_seed_val, sizeof(unsigned long long), cudaMemcpyHostToDevice);
 
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
@@ -181,10 +182,31 @@ bool AtlerProbabilityEstimation::runCuda() {
   curandState *rngStates;
   cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threadsPerBlock>>>(
-      runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
+// Create CUDA events
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
-  cudaDeviceSynchronize();
+    // Record the start event
+    cudaEventRecord(start, 0);
+
+    // Launch the kernel
+    VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threadsPerBlock>>>(
+        runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
+
+    // Record the stop event
+    cudaEventRecord(stop, 0);
+
+    // Wait for the stop event to complete
+    cudaEventSynchronize(stop);
+
+    // Calculate the elapsed time in milliseconds
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    // Output the execution time
+    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+    std::cout << "Kernel execution time: " << (milliseconds / 1000.0f) << " seconds" << std::endl;
 
   int *successCountHost = (int *)malloc(sizeof(int));
   cudaMemcpy(&successCountHost, successCount, sizeof(int), cudaMemcpyDeviceToHost);
