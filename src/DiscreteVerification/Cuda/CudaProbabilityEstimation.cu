@@ -29,10 +29,6 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
 
   // Copy global state to local memory for faster access
   curandState localState = states[tid];
-  
-  if (tid % 1000 == 0) {
-    printf("Thread %d initialized\n", tid);
-  }
 
   CudaSMCQuery lQuery = *query;
   CudaRunResult lRunner(*runner, &localState);
@@ -42,7 +38,7 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
 
   int lTimeBound = *timeBound;
   int lStepBound = *stepBound;
-  
+
   while (!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound)) {
     Cuda::CudaRealMarking *child = lRunner.realMarking;
     Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
@@ -69,8 +65,8 @@ bool setDeviceHeapSize(double fraction = 1) {
 
   size_t desired_heap_size = static_cast<size_t>(free_mem * fraction);
 
-  size_t min_heap_size = 10 * 1024 * 1024;         
-  size_t max_heap_size = 15ULL * 1024 * 1024 * 1024; 
+  size_t min_heap_size = 10 * 1024 * 1024;
+  size_t max_heap_size = 15ULL * 1024 * 1024 * 1024;
   if (desired_heap_size < min_heap_size) {
     desired_heap_size = min_heap_size;
   } else if (desired_heap_size > max_heap_size) {
@@ -114,6 +110,14 @@ bool AtlerProbabilityEstimation::runCuda() {
   // NOTE: Also find a way to simplify the representation of the PlaceVisitor
 
   std::cout << "Creating run generator..." << std::endl;
+
+  // Create CUDA events
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // Record the start event
+  cudaEventRecord(start, 0);
 
   const unsigned int threadsPerBlock = 256;
 
@@ -176,37 +180,27 @@ bool AtlerProbabilityEstimation::runCuda() {
   CudaRunResult *runResultDevice = allocResult->first;
   CudaRealMarking *realMarkingDevice = allocResult->second;
 
-  // testAllocationKernel<<<1, 1>>>(runResultDevice, realMarkingDevice, &this->runsNeeded);
-
   // Allocate device memory for rngStates
   curandState *rngStates;
   cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
-// Create CUDA events
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+  // Launch the kernel
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threadsPerBlock>>>(
+      runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
 
-    // Record the start event
-    cudaEventRecord(start, 0);
+  // Record the stop event
+  cudaEventRecord(stop, 0);
 
-    // Launch the kernel
-    VerifyTAPN::DiscreteVerification::runSimulationKernel<<<blocks, threadsPerBlock>>>(
-        runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
+  // Wait for the stop event to complete
+  cudaEventSynchronize(stop);
 
-    // Record the stop event
-    cudaEventRecord(stop, 0);
+  // Calculate the elapsed time in milliseconds
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
 
-    // Wait for the stop event to complete
-    cudaEventSynchronize(stop);
-
-    // Calculate the elapsed time in milliseconds
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    // Output the execution time
-    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
-    std::cout << "Kernel execution time: " << (milliseconds / 1000.0f) << " seconds" << std::endl;
+  // Output the execution time
+  std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+  std::cout << "Kernel execution time: " << (milliseconds / 1000.0f) << " seconds" << std::endl;
 
   int *successCountHost = (int *)malloc(sizeof(int));
   cudaMemcpy(&successCountHost, successCount, sizeof(int), cudaMemcpyDeviceToHost);
@@ -217,9 +211,7 @@ bool AtlerProbabilityEstimation::runCuda() {
     std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     return false;
   }
-
-  // testCudaSMCQueryAllocationKernel<<<1, 1>>>(d_cudaSMCQuery);
-
+  
   err = cudaGetLastError();
   if (err != cudaSuccess) {
     std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
