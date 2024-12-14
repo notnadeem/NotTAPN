@@ -71,13 +71,13 @@ struct Distribution {
       date = parameters.constant.value;
       break;
     case Uniform:
-      date = parameters.uniform.a + (parameters.uniform.b - parameters.uniform.a) * curand_uniform(state);
+      date = parameters.uniform.a + (parameters.uniform.b - parameters.uniform.a) * curand_uniform_double(state);
       break;
     case Exponential:
-      date = -logf(curand_uniform(state)) / parameters.exp.rate;
+      date = -logf(1 - curand_uniform_double(state)) / parameters.exp.rate;
       break;
     case Normal:
-      date = parameters.normal.mean + parameters.normal.stddev * curand_normal(state);
+      date = parameters.normal.mean + parameters.normal.stddev * curand_normal_double(state);
       break;
     case Gamma:
     case Erlang:
@@ -85,10 +85,10 @@ struct Distribution {
       break;
     case DiscreteUniform:
       date = parameters.discreteUniform.a +
-             (int)(curand_uniform(state) * (parameters.discreteUniform.b - parameters.discreteUniform.a + 1));
+             (int)(curand_uniform_double(state) * (parameters.discreteUniform.b - parameters.discreteUniform.a + 1));
       break;
     case Geometric:
-      date = (int)(log(curand_uniform(state)) / log(1.0 - parameters.geometric.p));
+      date = (int)(log(curand_uniform_double(state)) / log(1.0 - parameters.geometric.p));
       break;
     }
     if (precision > 0) {
@@ -104,8 +104,8 @@ struct Distribution {
       double d = shape - 1.0 / 3.0;
       double c = 1.0 / sqrt(9.0 * d);
       while (true) {
-        double z = curand_normal(state);
-        double u = curand_uniform(state);
+        double z = curand_normal_double(state);
+        double u = curand_uniform_double(state);
         double v = pow(1.0 + c * z, 3.0);
         if (z > -1.0 / c && log(u) < (z * z / 2.0 + d - d * v + d * log(v))) {
           return d * v * scale;
@@ -113,7 +113,7 @@ struct Distribution {
       }
     } else {
       double r = gamrnd_d(shape + 1.0, scale, state);
-      double u = curand_uniform(state);
+      double u = curand_uniform_double(state);
       return r * pow(u, 1.0 / shape);
     }
   }
