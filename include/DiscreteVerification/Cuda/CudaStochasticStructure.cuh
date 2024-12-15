@@ -35,8 +35,20 @@ namespace VerifyTAPN::Cuda::CudaSMC
     Geometric
   };
 
-  // Not sure about this one
-  __host__ __device__ const char *distributionName(DistributionType type);
+  __host__ __device__ const char *distributionName(DistributionType type) {
+      switch (type) {
+          case Constant: return "Constant";
+          case Uniform: return "Uniform";
+          case Exponential: return "Exponential";
+          case Normal: return "Normal";
+          case Gamma: return "Gamma";
+          case Erlang: return "Erlang";
+          case DiscreteUniform: return "DiscreteUniform";
+          case Geometric: return "Geometric";
+          default: return "Unknown";
+      }
+  }
+
 
   struct SMCUniformParameters
   {
@@ -92,7 +104,7 @@ namespace VerifyTAPN::Cuda::CudaSMC
     __device__ double sample(curandState_t *state, const unsigned int precision = 0) const
     {
       if (!isValid()) {
-        printf("Error: Invalid parameters for distribution type %d\n", type);
+        printf("Warning: Invalid parameters for distribution type %s\nKilling kernel thread\n", distributionName(type));
         __trap();
       }
       double date = 0;
