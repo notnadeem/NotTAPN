@@ -9,14 +9,13 @@
 #include "DiscreteVerification/Cuda/CudaTAPNConverter.cuh"
 #include "DiscreteVerification/VerificationTypes/AtlerProbabilityEstimation.hpp"
 
+#include <cooperative_groups.h>
 #include <cuda_runtime.h>
 
 namespace VerifyTAPN::DiscreteVerification {
 using namespace VerifyTAPN::Cuda;
 using namespace VerifyTAPN::Alloc;
-// For now single kernel execution per run needed
-// Since every run can have different execution time could be nice to try running multiple runs per kernel to improve
-// warp utilization
+namespace cg = cooperative_groups;
 
 __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::CudaSMCQuery *query, int *successCount,
                                     int *runsNeeded, curandState *states, unsigned long long *rand_seed, int *timeBound,
@@ -40,6 +39,46 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
   int lStepBound = *stepBound;
 
   while (!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound)) {
+    Cuda::CudaRealMarking *child = lRunner.realMarking;
+    Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
+    Cuda::AST::BoolResult result;
+
+    lQuery.accept(checker, result);
+
+    if (result.value) {
+      atomicAdd(successCount, 1);
+      break;
+    }
+
+    lRunner.next(&localState);
+  }
+}
+
+__global__ void runSimulationKernel1(Cuda::CudaRunResult *runner, Cuda::AST::CudaSMCQuery *query, int *successCount,
+                                    int *runsNeeded, curandState *states, unsigned long long *rand_seed, int *timeBound,
+                                    int *stepBound) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int runNeed = *runsNeeded;
+  if (tid >= runNeed) return;
+
+  curand_init(*rand_seed, tid, 0, &states[tid]);
+
+  // Copy global state to local memory for faster access
+  curandState localState = states[tid];
+
+  CudaSMCQuery lQuery = *query;
+  CudaRunResult lRunner(*runner, &localState);
+
+  // TODO prepare per thread
+  lRunner.prepare(&localState);
+
+  int lTimeBound = *timeBound;
+  int lStepBound = *stepBound;
+
+  cg::thread_block block = cg::this_thread_block();
+  auto tile32 = cg::tiled_partition<32>(block);
+
+  while (tile32.any(!lRunner.maximal && !(lRunner.totalTime >= lTimeBound || lRunner.totalSteps >= lStepBound))) {
     Cuda::CudaRealMarking *child = lRunner.realMarking;
     Cuda::CudaQueryVisitor checker(*child, *lRunner.tapn);
     Cuda::AST::BoolResult result;
@@ -201,7 +240,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   // Output the execution time
   std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
   std::cout << "Kernel execution time: " << (milliseconds / 1000.0f) << " seconds" << std::endl;
-
+  
   int *successCountHost = (int *)malloc(sizeof(int));
   cudaMemcpy(&successCountHost, successCount, sizeof(int), cudaMemcpyDeviceToHost);
   printf("Success count: %d\n", successCountHost);
@@ -211,7 +250,7 @@ bool AtlerProbabilityEstimation::runCuda() {
     std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     return false;
   }
-  
+
   err = cudaGetLastError();
   if (err != cudaSuccess) {
     std::cerr << "CUDA kernel launch failed: " << cudaGetErrorString(err) << std::endl;
