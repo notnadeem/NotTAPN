@@ -46,33 +46,33 @@ typedef SpecificResult<bool> BoolResult;
 
 class CudaVisitor {
 public:
-  __host__ __device__ virtual ~CudaVisitor() = default;
+   __device__ virtual ~CudaVisitor() = default;
 
-  __host__ __device__ virtual void visit(NotExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(NotExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(OrExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(OrExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(AndExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(AndExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(AtomicProposition &expr, Result &context) = 0;
+   __device__ virtual void visit(AtomicProposition &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(BoolExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(BoolExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(CudaQuery &query, Result &context) = 0;
+   __device__ virtual void visit(CudaQuery &query, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(DeadlockExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(DeadlockExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(NumberExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(NumberExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(IdentifierExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(IdentifierExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(MultiplyExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(MultiplyExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(MinusExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(MinusExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(SubtractExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(SubtractExpression &expr, Result &context) = 0;
 
-  __host__ __device__ virtual void visit(PlusExpression &expr, Result &context) = 0;
+   __device__ virtual void visit(PlusExpression &expr, Result &context) = 0;
 };
 } // namespace AST
 } // namespace VerifyTAPN::Cuda

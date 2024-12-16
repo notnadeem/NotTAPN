@@ -33,7 +33,7 @@ public:
       : AST::CudaQuery(other.quantifier, other.expr->clone()),
         smcSettings(other.smcSettings) {};
 
-  __host__ __device__ CudaSMCQuery &operator=(const CudaSMCQuery &other) {
+  __device__ CudaSMCQuery &operator=(const CudaSMCQuery &other) {
     if (&other != this) {
       delete expr;
       expr = other.expr->clone();
@@ -44,13 +44,13 @@ public:
 
   __host__ __device__ virtual CudaSMCQuery *clone() const override;
 
-  __host__ __device__ void accept(AST::CudaVisitor &visitor, AST::Result &context) override;
+  __device__ void accept(AST::CudaVisitor &visitor, AST::Result &context) override;
 
-  __host__ __device__ void setSMCSettings(CudaSMCSettings newSettings) {
+  __device__ void setSMCSettings(CudaSMCSettings newSettings) {
     smcSettings = newSettings;
   }
 
-  __host__ __device__ CudaSMCSettings &getSmcSettings() { return smcSettings; }
+  __device__ CudaSMCSettings &getSmcSettings() { return smcSettings; }
 
 public:
   AST::CudaQuantifier quantifier;

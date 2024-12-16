@@ -3,7 +3,7 @@
 
 #include "DiscreteVerification/Atler/SimpleAST.hpp"
 #include "DiscreteVerification/Cuda/CudaVisitor.cuh"
-#include <exception>
+
 #include <vector>
 #include <cuda_runtime.h>
 
@@ -15,7 +15,7 @@ class CudaPlaceVisitor : public CudaVisitor {
 public:
   __host__ __device__ CudaPlaceVisitor() = default;
 
-  ~CudaPlaceVisitor() override = default;
+  __host__ __device__ ~CudaPlaceVisitor() override = default;
 
   __host__ __device__ void visit(NotExpression &expr, Result &context) override;
 
@@ -27,7 +27,7 @@ public:
 
   __host__ __device__ void visit(BoolExpression &expr, Result &context) override;
 
-  __host__ __device__ void visit(SimpleQuery &query, Result &context) override;
+  __host__ __device__ void visit(CudaQuery &query, Result &context) override;
 
   __host__ __device__ void visit(DeadlockExpression &expr, Result &context) override;
 

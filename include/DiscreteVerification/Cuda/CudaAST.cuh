@@ -55,7 +55,7 @@ struct CudaExpression {
 
     __host__ __device__ CudaExpression();
     __host__ __device__ ~CudaExpression();
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ CudaExpression* clone() const;
 };
 
@@ -64,14 +64,14 @@ struct NotExpression {
     CudaExpression* expr;
 
     __host__ __device__ NotExpression(CudaExpression* expr = nullptr);
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ NotExpression* clone() const;
 };
 
 // Deadlock Expression
 struct DeadlockExpression {
     __host__ __device__ DeadlockExpression();
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ DeadlockExpression* clone() const;
 };
 
@@ -80,7 +80,7 @@ struct BoolExpression {
     bool value;
 
     __host__ __device__ BoolExpression(bool value = false);
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ BoolExpression* clone() const;
 };
 
@@ -95,7 +95,7 @@ struct AtomicProposition {
     __host__ __device__ AtomicProposition(ArithmeticExpression* left = nullptr, ArithmeticExpression* right = nullptr);
     __host__ __device__ AtomicProposition(ArithmeticExpression* l, const char* sop, ArithmeticExpression* r);
     __host__ __device__ AtomicProposition(ArithmeticExpression* left, op_e op, ArithmeticExpression* right);
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ AtomicProposition* clone() const;
 };
 
@@ -105,7 +105,7 @@ struct AndExpression {
     CudaExpression* right;
 
     __host__ __device__ AndExpression(CudaExpression* left = nullptr, CudaExpression* right = nullptr);
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ AndExpression* clone() const;
 };
 
@@ -115,7 +115,7 @@ struct OrExpression {
     CudaExpression* right;
 
     __host__ __device__ OrExpression(CudaExpression* left = nullptr, CudaExpression* right = nullptr);
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
     __host__ __device__ OrExpression* clone() const;
 };
 
@@ -134,9 +134,9 @@ struct ArithmeticExpression {
     };
 
     __host__ __device__ ArithmeticExpression();
-    __host__ __device__ ~ArithmeticExpression();
+    __device__ ~ArithmeticExpression();
     __host__ __device__ ArithmeticExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // PlusExpression (Operation Expression)
@@ -146,7 +146,7 @@ struct PlusExpression {
 
     __host__ __device__ PlusExpression(ArithmeticExpression *left = nullptr, ArithmeticExpression *right = nullptr);
     __host__ __device__ PlusExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // SubtractExpression (Operation Expression)
@@ -156,7 +156,7 @@ struct SubtractExpression {
 
     __host__ __device__ SubtractExpression(ArithmeticExpression *left = nullptr, ArithmeticExpression *right = nullptr);
     __host__ __device__ SubtractExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // MinusExpression (Unary operation)
@@ -165,7 +165,7 @@ struct MinusExpression {
 
     __host__ __device__ MinusExpression(ArithmeticExpression *value = nullptr);
     __host__ __device__ MinusExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // MultiplyExpression (Operation Expression)
@@ -175,7 +175,7 @@ struct MultiplyExpression {
 
     __host__ __device__ MultiplyExpression(ArithmeticExpression *left = nullptr, ArithmeticExpression *right = nullptr);
     __host__ __device__ MultiplyExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // NumberExpression (Literal value)
@@ -184,7 +184,7 @@ struct NumberExpression {
 
     __host__ __device__ NumberExpression(int value = 0);
     __host__ __device__ NumberExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // IdentifierExpression
@@ -193,7 +193,7 @@ struct IdentifierExpression {
 
     __host__ __device__ IdentifierExpression(int place = 0);
     __host__ __device__ IdentifierExpression* clone() const;
-    __host__ __device__ void accept(CudaVisitor &visitor, Result &context);
+    __device__ void accept(CudaVisitor &visitor, Result &context);
 };
 
 // EF : Reachability
@@ -214,13 +214,13 @@ struct CudaQuery {
   __host__ __device__ CudaQuery &operator=(const CudaQuery &other);
   __host__ __device__ ~CudaQuery();
   __host__ __device__ virtual CudaQuery *clone() const;
-  __host__ __device__ virtual void accept(CudaVisitor &visitor, Result &context);
-  __host__ __device__ CudaQuantifier getQuantifier() const;
-  __host__ __device__ const CudaExpression &getConstChild() const;
-  __host__ __device__ CudaExpression *getChild();
-  __host__ __device__ void setChild(CudaExpression *expr);
-  __host__ __device__ void setQuantifier(CudaQuantifier q);
-  __host__ __device__ bool hasSMCQuantifier() const;
+  __device__ virtual void accept(CudaVisitor &visitor, Result &context);
+  __device__ CudaQuantifier getQuantifier() const;
+  __device__ const CudaExpression &getConstChild() const;
+  __device__ CudaExpression *getChild();
+  __device__ void setChild(CudaExpression *expr);
+  __device__ void setQuantifier(CudaQuantifier q);
+  __device__ bool hasSMCQuantifier() const;
 
   CudaQuantifier quantifier;
   CudaExpression *expr;

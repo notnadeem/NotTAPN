@@ -10,6 +10,10 @@ target_compile_options(Cuda PRIVATE
     >
 )
 
+# target_link_libraries(Cuda PRIVATE CUDA::cudart CUDA::cudadevrt)
+# target_link_libraries(Cuda PRIVATE CUDA::cudart)
+
+
 set_target_properties(Cuda PROPERTIES 
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )

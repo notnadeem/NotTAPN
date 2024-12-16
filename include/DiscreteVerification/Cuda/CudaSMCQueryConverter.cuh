@@ -56,7 +56,6 @@ inline VerifyTAPN::Cuda::AST::CudaExpression* CudaSMCQueryConverter::convert(con
         return cudaExpr;
     }
 
-    delete cudaExpr;
     return nullptr;
 }
 
@@ -91,7 +90,6 @@ inline VerifyTAPN::Cuda::AST::ArithmeticExpression* CudaSMCQueryConverter::conve
         return arithmeticExpr;
     }
 
-    delete arithmeticExpr;
     return nullptr;
 }
 
