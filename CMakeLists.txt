@@ -20,7 +20,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # add_compile_options(-fsanitize=address)
 # add_link_options(-fsanitize=address)
-set(CMAKE_CXX_FLAGS_RELEASE "-O0")
 
 # if ( CMAKE_COMPILER_IS_GNUCC )
 #     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
