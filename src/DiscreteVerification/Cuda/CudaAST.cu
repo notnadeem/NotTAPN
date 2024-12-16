@@ -181,7 +181,7 @@ __host__ __device__ AndExpression *AndExpression::clone() const {
 __device__ void AndExpression::accept(CudaVisitor &visitor, Result &context) { visitor.visit(*this, context); }
 
 // Definitions of OrExpression methods
-__host__ __host__ __device__ OrExpression::OrExpression(CudaExpression *left, CudaExpression *right)
+__host__ __device__ OrExpression::OrExpression(CudaExpression *left, CudaExpression *right)
     : left(left), right(right) {}
 
 __host__ __device__ OrExpression *OrExpression::clone() const {
@@ -191,7 +191,7 @@ __host__ __device__ OrExpression *OrExpression::clone() const {
 __device__ void OrExpression::accept(CudaVisitor &visitor, Result &context) { visitor.visit(*this, context); }
 
 // Definitions of ArithmeticExpression methods
-__host__ __host__ __device__ ArithmeticExpression::ArithmeticExpression()
+__host__ __device__ ArithmeticExpression::ArithmeticExpression()
     : type(UNKNOWN_EXPRESSION), eval(0), plusExpr(nullptr) {}
 
 __host__ __device__ ArithmeticExpression::~ArithmeticExpression() {
