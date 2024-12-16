@@ -34,7 +34,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda --expt-relaxed-constexpr --verbose -Xptxas=-v -Xptxas=-O0")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda --expt-relaxed-constexpr --verbose -Xptxas=-v -Xptxas=-O0 --no-expensive-optimizations")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O0 -DNDEBUG")
 set(CMAKE_CUDA_ARCHITECTURES 86)
 # Default Values Build Flags
