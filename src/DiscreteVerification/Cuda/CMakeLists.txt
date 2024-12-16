@@ -10,6 +10,7 @@ target_compile_options(Cuda PRIVATE
         --expt-relaxed-constexpr
         -Xptxas=-O0
         -Xptxas=-v
+        -Xptxas=-allow-expensive-optimizations=false
         --verbose
     >
 )
