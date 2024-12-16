@@ -35,7 +35,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O0")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --verbose")
 # Default Values Build Flags
 option(VERIFYDTAPN_Static "Link libraries statically" ON)
 option(VERIFYDTAPN_GetDependencies "Fetch external dependencies from web." ON)
