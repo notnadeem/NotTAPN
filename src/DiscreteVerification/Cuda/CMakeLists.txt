@@ -5,7 +5,8 @@ add_library(Cuda CudaProbabilityEstimation.cu CudaAST.cu CudaSMCQuery.cu)
 target_compile_options(Cuda PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
         --relocatable-device-code=true
-        -O0
+        -g
+        -G
     >
 )
 
