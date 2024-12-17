@@ -4,7 +4,7 @@
   <property>
     <id>Stays under capacity</id>
     <description>Stays under capacity</description>
-    <smc confidence="0.95" interval-width="0.005" time-bound="100"/>
+    <smc confidence="0.95" interval-width="0.01" time-bound="100"/>
     <formula>
       <globally>
         <integer-le>
@@ -16,3 +16,4 @@
       </globally>
     </formula>
   </property>
+</property-set>
