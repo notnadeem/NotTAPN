@@ -13,16 +13,7 @@ enum FiringMode { Oldest, Youngest, Random };
 
 std::string firingModeName(FiringMode type);
 
-enum DistributionType {
-  Constant,
-  Uniform,
-  Exponential,
-  Normal,
-  Gamma,
-  Erlang,
-  DiscreteUniform,
-  Geometric
-};
+enum DistributionType { Constant, Uniform, Exponential, Normal, Gamma, Erlang, DiscreteUniform, Geometric };
 
 std::string distributionName(DistributionType type);
 
@@ -66,35 +57,30 @@ struct Distribution {
   DistributionType type;
   DistributionParameters parameters;
 
-  template <typename T>
-  double sample(T &engine, const unsigned int precision = 0) const {
+  template <typename T> double sample(T &engine, const unsigned int precision = 0) const {
     double date = 0;
     switch (type) {
     case Constant:
       date = parameters.constant.value;
       break;
     case Uniform:
-      date = std::uniform_real_distribution(parameters.uniform.a,
-                                            parameters.uniform.b)(engine);
+      date = std::uniform_real_distribution<double>(parameters.uniform.a, parameters.uniform.b)(engine);
       break;
     case Exponential:
-      date = std::exponential_distribution(parameters.exp.rate)(engine);
+      date = std::exponential_distribution<double>(parameters.exp.rate)(engine);
       break;
     case Normal:
-      date = std::normal_distribution(parameters.normal.mean,
-                                      parameters.normal.stddev)(engine);
+      date = std::normal_distribution<double>(parameters.normal.mean, parameters.normal.stddev)(engine);
       break;
     case Gamma:
     case Erlang:
-      date = std::gamma_distribution(parameters.gamma.shape,
-                                     parameters.gamma.scale)(engine);
+      date = std::gamma_distribution<double>(parameters.gamma.shape, parameters.gamma.scale)(engine);
       break;
     case DiscreteUniform:
-      date = std::uniform_int_distribution(
-          parameters.discreteUniform.a, parameters.discreteUniform.b)(engine);
+      date = std::uniform_int_distribution<double>(parameters.discreteUniform.a, parameters.discreteUniform.b)(engine);
       break;
     case Geometric:
-      date = std::geometric_distribution(parameters.geometric.p)(engine);
+      date = std::geometric_distribution<double>(parameters.geometric.p)(engine);
       break;
     }
     if (precision > 0) {
