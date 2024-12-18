@@ -77,10 +77,11 @@ struct Distribution {
       date = std::gamma_distribution<double>(parameters.gamma.shape, parameters.gamma.scale)(engine);
       break;
     case DiscreteUniform:
-      date = std::uniform_int_distribution<double>(parameters.discreteUniform.a, parameters.discreteUniform.b)(engine);
+      date = static_cast<double> std::uniform_int_distribution<int>(parameters.discreteUniform.a,
+                                                                    parameters.discreteUniform.b)(engine);
       break;
     case Geometric:
-      date = std::geometric_distribution<double>(parameters.geometric.p)(engine);
+      date = static_cast<double> std::geometric_distribution<int>(parameters.geometric.p)(engine);
       break;
     }
     if (precision > 0) {
