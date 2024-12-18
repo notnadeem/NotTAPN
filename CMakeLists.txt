@@ -56,6 +56,16 @@ set(VERIFYDTAPN_OSX_DEPLOYMENT_TARGET
 
 # Configure Project
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result OUTPUT output)
+
+if(result)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+else()
+    message(WARNING "IPO is not supported: ${output}")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+endif()
+
 # Configure Static
 if (VERIFYDTAPN_Static AND NOT BUILD_TESTING)
     set(BUILD_SHARED_LIBS OFF)
