@@ -260,15 +260,15 @@ struct AtlerRunResult {
 
     if (!infinite_weights.empty()) {
       int winner_index =
-          std::uniform_int_distribution<>(0, infinite_weights.size - 1)(rng);
+          std::uniform_int_distribution<int>(0, infinite_weights.size - 1)(rng);
       return stapn->transitions[infinite_weights.get(winner_index)];
     }
     if (total_weight == 0) {
       int winner_index =
-          std::uniform_int_distribution<>(0, winner_indexes.size - 1)(rng);
+          std::uniform_int_distribution<int>(0, winner_indexes.size - 1)(rng);
       return stapn->transitions[winner_indexes.get(winner_index)];
     }
-    double winning_weight = std::uniform_real_distribution<>(0.0, total_weight)(rng);
+    double winning_weight = std::uniform_real_distribution<double>(0.0, total_weight)(rng);
     for (size_t i = 0; i < winner_indexes.size; i++) {
       auto candidate = winner_indexes.get(i);
       SimpleTimedTransition *transition = stapn->transitions[candidate];
@@ -383,7 +383,7 @@ struct AtlerRunResult {
                                                    const SimpleTimeInterval &timeInterval, const int weight) {
     auto res = SimpleDynamicArray<SimpleRealToken>(10);
     int remaining = weight;
-    std::uniform_int_distribution<> randomTokenIndex(0, tokenList.size - 1);
+    std::uniform_int_distribution<int> randomTokenIndex(0, tokenList.size - 1);
     size_t tok_index = randomTokenIndex(rng);
     size_t tested = 0;
 
@@ -396,7 +396,7 @@ struct AtlerRunResult {
         if (tokenList.get(tok_index)->count == 0) {
           delete tokenList.get(tok_index);
           tokenList.remove(tok_index);
-          randomTokenIndex = std::uniform_int_distribution<>(0, tokenList.size - 1);
+          randomTokenIndex = std::uniform_int_distribution<int>(0, tokenList.size - 1);
         }
         if (remaining > 0) {
           tok_index = randomTokenIndex(rng);
