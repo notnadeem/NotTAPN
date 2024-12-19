@@ -5,12 +5,11 @@ add_library(Cuda CudaProbabilityEstimation.cu CudaAST.cu CudaSMCQuery.cu)
 target_compile_options(Cuda PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
         --relocatable-device-code=true
-        -O0
+        -O3
         --extended-lambda 
         --expt-relaxed-constexpr
-        -Xptxas=-O0
+        -Xptxas=-O3
         -Xptxas=-v
-        -Xptxas=-allow-expensive-optimizations=false
         --verbose
     >
 )
