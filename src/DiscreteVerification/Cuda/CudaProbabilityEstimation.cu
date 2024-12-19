@@ -22,7 +22,7 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
                                     int *stepBound) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
-  if (tid >= 1) return;
+  if (tid >= 2) return;
 
   curand_init(*rand_seed, tid, 0, &states[tid]);
 
@@ -224,7 +224,7 @@ bool AtlerProbabilityEstimation::runCuda() {
   cudaMalloc(&rngStates, this->runsNeeded * sizeof(curandState_t));
 
   // Launch the kernel
-  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, 1>>>(
+  VerifyTAPN::DiscreteVerification::runSimulationKernel<<<1, 2>>>(
       runResultDevice, d_cudaSMCQuery, successCount, runsNeeded, rngStates, rand_seed, timeBound, stepBound);
 
   // Record the stop event
