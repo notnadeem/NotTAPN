@@ -22,7 +22,7 @@ __global__ void runSimulationKernel(Cuda::CudaRunResult *runner, Cuda::AST::Cuda
                                     int *stepBound) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int runNeed = *runsNeeded;
-  if (tid >= 0) return;
+  if (tid >= 1) return;
 
   curand_init(*rand_seed, tid, 0, &states[tid]);
 
