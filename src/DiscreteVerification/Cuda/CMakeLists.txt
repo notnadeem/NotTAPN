@@ -5,10 +5,10 @@ add_library(Cuda CudaProbabilityEstimation.cu CudaAST.cu CudaSMCQuery.cu)
 target_compile_options(Cuda PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
         --relocatable-device-code=true
-        -O0
+        -O3
         --extended-lambda 
         --expt-relaxed-constexpr
-        -Xptxas=-O0
+        -Xptxas=-O3
         -Xptxas=-v
         -Xptxas=-allow-expensive-optimizations=false
         --verbose
@@ -18,6 +18,6 @@ target_compile_options(Cuda PRIVATE
 # target_link_libraries(Cuda PRIVATE CUDA::cudart CUDA::cudadevrt)
 # target_link_libraries(Cuda PRIVATE CUDA::cudart)
 
-set_target_properties(Cuda PROPERTIES 
+set_target_properties(Cuda PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
